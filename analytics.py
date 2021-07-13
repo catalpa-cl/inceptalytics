@@ -37,17 +37,20 @@ class Project:
                     annotator = Path(cas_file).stem
                     cas = cassis.load_cas_from_xmi(BytesIO(annotation_zip.read(cas_file)), typesystem)
 
-                    annotations.append((source_file, annotator, cas))
+                    annotations.append((cas, source_file, annotator))
 
-        return pd.DataFrame(annotations, columns=['source_file', 'annotator', 'cas'])
+        return pd.DataFrame(annotations, columns=['cas', 'source_file', 'annotator'])
 
-    def _cas_objects(self, filter_by=None):
+    def _cas_df(self, annotators=None, source_files=None):
         df = self._annotation_info
 
-        if filter_by:
-            df = df.query(filter_by)
+        if annotators:
+            df = df.query('annotator == @annotators')
 
-        return df['cas'].tolist()
+        if source_files:
+            df = df.query('source_file == @source_files')
+
+        return df
 
     def get_annotated_file_names(self) -> tuple:
         complete_names = []
@@ -74,22 +77,20 @@ class Project:
                             sub_zip_file.extractall(target_path + file.split('.')[0])
                         os.remove(target_path + file)
 
-    def annotations_of_layer(self, layer_name):
+    def annotations_of_layer(self, layer_name, annotators=None, source_files=None, return_info=True):
         if len(layer_name.split('.')) == 1:
             layer_name = f'webanno.custom.{layer_name}'
 
         annotations = []
-        for cas in self._cas_objects():
+        for cas, source_file, annotator in self._cas_df(annotators, source_files).itertuples(index=False, name=None):
             try:
                 for annotation in cas.select(layer_name):
-                    annotations.append(annotation)
+                    if return_info:
+                        entry = (annotation, source_file, annotator)
+                    else:
+                        entry = annotation
+                    annotations.append(entry)
             except cassis.typesystem.TypeNotFoundError:
                 continue
 
         return annotations
-
-
-if __name__ == '__main__':
-    project = Project('data/Gruppenannotation_project_2021-07-13_0813.zip')
-    print(project._annotation_info['source_file'].sort_values().unique()[:6])
-    print(len(project.annotations_of_layer('Zielgruppenadressierung')))
