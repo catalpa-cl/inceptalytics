@@ -1,3 +1,4 @@
+import os
 import cassis
 from pathlib import Path
 from zipfile import ZipFile
@@ -38,6 +39,11 @@ class Project:
                 if file.startswith(folder_name):
                     zip_file.extract(file, target_path)
 
+                    if file.split('.')[-1] == 'zip':
+                        with ZipFile(target_path + file) as sub_zip_file:
+                            sub_zip_file.extractall(target_path + file.split('.')[0])
+                        os.remove(target_path + file)
+
     @property
     def cas_objects(self):
         annotation_dir = self._project_path/'annotation'
@@ -53,7 +59,6 @@ class Project:
 
         return cases
 
-
     def annotations_of_layer(self, layer_name):
         if len(layer_name.split('.')) == 1:
             layer_name = f'webanno.custom.{layer_name}'
@@ -67,3 +72,8 @@ class Project:
                 continue
 
         return annotations
+
+
+if __name__ == '__main__':
+    project = Project('project.zip')
+    project.extract_project_files(target_path='extracted/', folder_name='annotation/')
