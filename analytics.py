@@ -2,6 +2,9 @@ import os
 import cassis
 from pathlib import Path
 from zipfile import ZipFile
+from io import BytesIO
+import pandas as pd
+from functools import cached_property
 
 
 def load_typesystem(path):
@@ -18,6 +21,33 @@ class Project:
     def __init__(self, project_zip):
         self.project_zip = project_zip
         self._project_path = Path(project_zip)
+
+    @cached_property
+    def _annotation_info(self):
+        annotations = []
+        with ZipFile(self.project_zip) as project_zip:
+            annotation_zips = (fp for fp in project_zip.namelist() if
+                               fp.startswith('annotation/') and fp.endswith('.zip'))
+            for file_path in annotation_zips:
+                source_file = Path(file_path).parent.name
+                with ZipFile(BytesIO(project_zip.read(file_path))) as annotation_zip:
+                    typesystem = cassis.load_typesystem(BytesIO(annotation_zip.read('TypeSystem.xml')))
+
+                    cas_file = next(f for f in annotation_zip.namelist() if f.endswith('.xmi'))
+                    annotator = Path(cas_file).stem
+                    cas = cassis.load_cas_from_xmi(BytesIO(annotation_zip.read(cas_file)), typesystem)
+
+                    annotations.append((source_file, annotator, cas))
+
+        return pd.DataFrame(annotations, columns=['source_file', 'annotator', 'cas'])
+
+    def _cas_objects(self, filter_by=None):
+        df = self._annotation_info
+
+        if filter_by:
+            df = df.query(filter_by)
+
+        return df['cas'].tolist()
 
     def get_annotated_file_names(self) -> tuple:
         complete_names = []
@@ -44,27 +74,12 @@ class Project:
                             sub_zip_file.extractall(target_path + file.split('.')[0])
                         os.remove(target_path + file)
 
-    @property
-    def cas_objects(self):
-        annotation_dir = self._project_path/'annotation'
-
-        cases = []
-        for source_dir in annotation_dir.iterdir():
-            for annotator_dir in source_dir.iterdir():
-                ts_file = (annotator_dir/'TypeSystem.xml').resolve()
-                cas_file = next(annotator_dir.glob('*.xmi')).resolve()
-                cas = load_cas(cas_file, load_typesystem(ts_file))
-
-                cases.append(cas)
-
-        return cases
-
     def annotations_of_layer(self, layer_name):
         if len(layer_name.split('.')) == 1:
             layer_name = f'webanno.custom.{layer_name}'
 
         annotations = []
-        for cas in self.cas_objects:
+        for cas in self._cas_objects():
             try:
                 for annotation in cas.select(layer_name):
                     annotations.append(annotation)
@@ -75,5 +90,6 @@ class Project:
 
 
 if __name__ == '__main__':
-    project = Project('project.zip')
-    project.extract_project_files(target_path='extracted/', folder_name='annotation/')
+    project = Project('data/Gruppenannotation_project_2021-07-13_0813.zip')
+    print(project._annotation_info['source_file'].sort_values().unique()[:6])
+    print(len(project.annotations_of_layer('Zielgruppenadressierung')))
