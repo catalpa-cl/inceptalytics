@@ -5,19 +5,12 @@ from zipfile import ZipFile
 from io import BytesIO
 import pandas as pd
 from functools import cached_property
-
-
-def load_typesystem(path):
-    with open(path, 'rb') as f:
-        return cassis.load_typesystem(f)
-
-
-def load_cas(path, typesystem):
-    with open(path, 'rb') as f:
-        return cassis.load_cas_from_xmi(f, typesystem)
-
+from itertools import combinations
+from sklearn.metrics import cohen_kappa_score
+from krippendorff import alpha
 
 class Project:
+    # TODO: refactor into static constructor fromZippedXMI
     def __init__(self, project_zip):
         self.project_zip = project_zip
         self._project_path = Path(project_zip)
@@ -41,7 +34,19 @@ class Project:
 
         return pd.DataFrame(annotations, columns=['cas', 'source_file', 'annotator'])
 
-    def _cas_df(self, annotators=None, source_files=None):
+    @property
+    def typesystem(self):
+        return self._annotation_info.loc[0, 'cas'].typesystem
+
+    @property
+    def source_file_names(self):
+        return self._annotation_info['source_file'].unique().tolist()
+
+    @property
+    def annotators(self):
+        return self._annotation_info['annotator'].unique().tolist()
+
+    def _filter_cases(self, annotators=None, source_files=None):
         df = self._annotation_info
 
         if annotators:
@@ -77,12 +82,12 @@ class Project:
                             sub_zip_file.extractall(target_path + file.split('.')[0])
                         os.remove(target_path + file)
 
-    def annotations_of_layer(self, layer_name, annotators=None, source_files=None, return_info=True):
+    def annotations_of_layer(self, layer_name, annotators=None, source_files=None, return_info=True, as_dataframe=False):
         if len(layer_name.split('.')) == 1:
             layer_name = f'webanno.custom.{layer_name}'
 
         annotations = []
-        for cas, source_file, annotator in self._cas_df(annotators, source_files).itertuples(index=False, name=None):
+        for cas, source_file, annotator in self._filter_cases(annotators, source_files).itertuples(index=False, name=None):
             try:
                 for annotation in cas.select(layer_name):
                     if return_info:
@@ -93,4 +98,52 @@ class Project:
             except cassis.typesystem.TypeNotFoundError:
                 continue
 
+        if as_dataframe and return_info:
+            colnames = ['annotation', 'source_file', 'annotator']
+            annotations = pd.DataFrame(annotations, columns=colnames)
+
         return annotations
+
+    def annotation_matrix(self, layer_name, annotators=None, source_files=None):
+        annotations = self.annotations_of_layer(layer_name, annotators, source_files, as_dataframe=True)
+
+        transformations = {'begin': lambda a: a.begin, 'end': lambda a: a.end}
+        index = ['source_file', 'begin', 'end', 'annotator']
+        annotations = annotations.join(annotations['annotation'].transform(transformations)).set_index(index)
+
+        # FIXME: deal with duplicate annotations in a safer way
+        return annotations.loc[~annotations.index.duplicated(), 'annotation'].unstack()
+
+    def feature_matrix(self, layer_name, feature_name, annotators=None, source_files=None):
+        annotations = self.annotation_matrix(layer_name, annotators, source_files)
+        return annotations.applymap(lambda x: x.get(feature_name), na_action='ignore')
+
+    def iaa(self, layer_name, feature_name, measure='pairwise_kappa', annotators=None, source_files=None):
+        annotations = self.feature_matrix(layer_name, feature_name, annotators, source_files)
+
+        if measure == 'pairwise_kappa':
+            annotators = annotations.columns
+
+            entries = []
+            for pair in combinations(annotators, 2):
+                annotator_a, annotator_b = pair
+                data = annotations[list(pair)].dropna().values.T
+
+                try:
+                    score = cohen_kappa_score(data[0], data[1])
+                except Exception:
+                    score = 0.0
+
+                entries.append((annotator_a, annotator_b, score))
+
+            return pd.DataFrame(entries, columns=['annotator_a', 'annotator_b', 'kappa']).set_index(['annotator_a', 'annotator_b'])
+
+        if measure == 'krippendorff':
+            categories = annotations.stack().unique()
+            category_to_index = {category: i for i, category in enumerate(categories)}
+            return alpha(annotations.replace(category_to_index).values.T, level_of_measurement='nominal')
+
+
+
+print(Project('data/Gruppenannotation_project_2021-07-13_0813.zip').iaa('Zielgruppenadressierung', 'GroupAffiliation', measure='krippendorff'))
+project = Project('data/Gruppenannotation_project_2021-07-13_0813.zip')

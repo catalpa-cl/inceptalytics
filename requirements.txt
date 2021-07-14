@@ -1,0 +1,4 @@
+dkpro-cassis
+pandas
+scikit-learn
+krippendorff
