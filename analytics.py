@@ -9,6 +9,13 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 
+UIMA_TO_PANDAS_TYPE_MAP = {
+    'uima.cas.Boolean': 'bool',
+    'uima.cas.Integer': 'int',
+    'uima.cas.Float': 'float',
+    'uima.cas.String': 'str'
+}
+
 class Project:
     # TODO: refactor into static constructor fromZippedXMI
     def __init__(self, project_zip):
@@ -82,9 +89,16 @@ class Project:
                             sub_zip_file.extractall(target_path + file.split('.')[0])
                         os.remove(target_path + file)
 
+    def get_dtype(self, layer_name, feature_name):
+        layer_name = self._extend_layer_name(layer_name)
+        uima_type = self.typesystem.get_type(layer_name).get_feature(feature_name).rangeTypeName
+        return UIMA_TO_PANDAS_TYPE_MAP.get(uima_type, 'object')
+
+    def _extend_layer_name(self, layer_name):
+        return f'webanno.custom.{layer_name}' if len(layer_name.split('.')) == 1 else layer_name
+
     def annotations_of_layer(self, layer_name, annotators=None, source_files=None, return_info=True, as_dataframe=False):
-        if len(layer_name.split('.')) == 1:
-            layer_name = f'webanno.custom.{layer_name}'
+        layer_name = self._extend_layer_name(layer_name)
 
         annotations = []
         for cas, source_file, annotator in self._filter_cases(annotators, source_files).itertuples(index=False, name=None):
@@ -118,7 +132,15 @@ class Project:
         annotations = self.annotation_matrix(layer_name, annotators, source_files)
         return annotations.applymap(lambda x: x.get(feature_name), na_action='ignore')
 
-    def iaa(self, layer_name, feature_name, measure='pairwise_kappa', annotators=None, source_files=None):
+    def feature_counts(self, layer_name, feature_name, grouped_by=None, annotators=None, source_files=None):
+        annotations = self.feature_matrix(layer_name, feature_name, annotators, source_files).stack()
+
+        if grouped_by is not None:
+            annotations = annotations.groupby(grouped_by)
+
+        return annotations.value_counts()
+
+    def iaa(self, layer_name, feature_name, measure='pairwise_kappa', level='nominal', annotators=None, source_files=None):
         annotations = self.feature_matrix(layer_name, feature_name, annotators, source_files)
 
         if measure == 'pairwise_kappa':
@@ -128,22 +150,18 @@ class Project:
             for pair in combinations(annotators, 2):
                 annotator_a, annotator_b = pair
                 data = annotations[list(pair)].dropna().values.T
+                n = data.shape[1]
 
                 try:
                     score = cohen_kappa_score(data[0], data[1])
                 except Exception:
                     score = 0.0
 
-                entries.append((annotator_a, annotator_b, score))
+                entries.append((annotator_a, annotator_b, n, score))
 
-            return pd.DataFrame(entries, columns=['annotator_a', 'annotator_b', 'kappa']).set_index(['annotator_a', 'annotator_b'])
+            return pd.DataFrame(entries, columns=['a', 'b', 'n', 'kappa']).set_index(['a', 'b'])
 
         if measure == 'krippendorff':
             categories = annotations.stack().unique()
             category_to_index = {category: i for i, category in enumerate(categories)}
-            return alpha(annotations.replace(category_to_index).values.T, level_of_measurement='nominal')
-
-
-
-print(Project('data/Gruppenannotation_project_2021-07-13_0813.zip').iaa('Zielgruppenadressierung', 'GroupAffiliation', measure='krippendorff'))
-project = Project('data/Gruppenannotation_project_2021-07-13_0813.zip')
+            return alpha(annotations.replace(category_to_index).values.T, level_of_measurement=level)
