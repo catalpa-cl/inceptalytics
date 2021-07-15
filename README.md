@@ -9,7 +9,7 @@ from analytics import Project
 project = Project('path/to/export.zip')
 
 # getting annotations
-project.annotations_of_layer('cassis.Token')
+project.annotations('cassis.Token')
 >>> [
     (cassis_Token(...), 'file_0.txt', 'annotator_a'),
     (cassis_Token(...), 'file_0.txt', 'annotator_b'),
@@ -18,7 +18,7 @@ project.annotations_of_layer('cassis.Token')
 ]
 
 # omit source file and annotator information
-project.annotations_of_layer('cassis.Token', return_info=False)
+project.annotations('cassis.Token', return_info=False)
 >>> [
     cassis_Token(...),
     cassis_Token(...),
@@ -27,7 +27,7 @@ project.annotations_of_layer('cassis.Token', return_info=False)
 ]
 
 # query for some custom layer
-project.annotations_of_layer('webanno.custom.SomeLayerName', return_info=False)
+project.annotations('webanno.custom.SomeLayerName', return_info=False)
 >>> [
     webanno_custom_SomeLayerName(...),  
     ...
@@ -36,11 +36,11 @@ project.annotations_of_layer('webanno.custom.SomeLayerName', return_info=False)
 
 
 # slightly shorter when using custom annotations
-project.annotations_of_layer('SomeLayerName')
+project.annotations('SomeLayerName')
 >>> ...
 
 # selecting specific annotators and source files
-project.annotations_of_layer('SomeLayerName', 
+project.annotations('SomeLayerName', 
                              annotators=['annotator_a', 'annotator_b', 'annotator_d'], 
                              source_files=['file_1.txt', 'file_42.txt'])
 
