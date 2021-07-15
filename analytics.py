@@ -4,7 +4,6 @@ from itertools import combinations
 from functools import lru_cache
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
-
 from utils import extend_layer_name, annotation_info_from_xmi_zip
 
 
@@ -22,6 +21,14 @@ class Project:
     @property
     def typesystem(self):
         return self._annotation_info.loc[0, 'cas'].typesystem
+
+    @property
+    def layers(self):
+        return [t.name for t in self.typesystem.get_types()]
+
+    @property
+    def custom_layers(self):
+        return [l for l in self.layers if l.startswith('webanno.custom')]
 
     @property
     def source_file_names(self):
@@ -49,32 +56,36 @@ class Project:
 
         return df
 
+    def features(self, layer_name):
+        return [f.name for f in self.typesystem.get_type(extend_layer_name(layer_name)).all_features]
+
     @lru_cache(maxsize=4)
     def view(self, layer_name, feature_name=None, annotators=None, source_files=None):
-        level = 'layer' if feature_name is None else 'feature'
-        return View(self.annotations(layer_name, feature_name, annotators, source_files), self, level)
-
-    def annotations(self, layer_name, feature_name=None, annotators=None, source_files=None):
         layer_name = extend_layer_name(layer_name)
-        relevant_annotations = self._filter_annotation_info(annotators, source_files).itertuples(index=False, name=None)
+        level = 'layer' if feature_name is None else 'feature'
 
-        annotations = []
-        for cas, source_file, annotator in relevant_annotations:
+        info = self._filter_annotation_info(annotators, source_files)
+        annotations = self._annotations(info, layer_name, feature_name)
+
+        return View(annotations, self, level)
+
+    @staticmethod
+    def _annotations(annotation_info, layer_name, feature_name):
+        entries = []
+        for cas, source_file, annotator in annotation_info.itertuples(index=False, name=None):
             try:
                 for annotation in cas.select(layer_name):
                     entry = (annotation, source_file, annotation.begin, annotation.end, annotator)
-                    annotations.append(entry)
+                    entries.append(entry)
             except cassis.typesystem.TypeNotFoundError:
                 continue
 
-        colnames = ['annotation', 'source_file', 'begin', 'end', 'annotator']
-
+        columns = ['annotation', 'source_file', 'begin', 'end', 'annotator']
         index = ['source_file', 'begin', 'end', 'annotator']
-        annotations = pd.DataFrame(annotations, columns=colnames).set_index(index)
+        annotations = pd.DataFrame(entries, columns=columns).set_index(index)
 
         if feature_name is not None:
             annotations = annotations.applymap(lambda x: x.get(feature_name), na_action='ignore')
-
         return annotations
 
 
