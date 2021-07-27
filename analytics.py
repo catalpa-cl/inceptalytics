@@ -75,25 +75,33 @@ class Project:
         for cas, source_file, annotator in annotation_info.itertuples(index=False, name=None):
             try:
                 for annotation in cas.select(layer_name):
-                    entry = (annotation, source_file, annotation.begin, annotation.end, annotator)
+                    entry = (annotation, annotation.get_covered_text(), source_file, annotation.begin, annotation.end, annotator)
                     entries.append(entry)
             except cassis.typesystem.TypeNotFoundError:
                 continue
 
-        columns = ['annotation', 'source_file', 'begin', 'end', 'annotator']
+        columns = ['_annotation', 'text', 'source_file', 'begin', 'end', 'annotator']
         index = ['source_file', 'begin', 'end', 'annotator']
         annotations = pd.DataFrame(entries, columns=columns).set_index(index)
 
         if feature_name is not None:
-            annotations = annotations.applymap(lambda x: x.get(feature_name), na_action='ignore')
+            annotations['annotation'] = annotations['_annotation'].map(lambda x: x.get(feature_name), na_action='ignore')
+        else:
+            annotations['annotation'] = annotations['text']
+
         return annotations
 
 
 class View:
-    def __init__(self, annotations, project, level='layer'):
+    def __init__(self, annotations, project, layer_name, feature_name=None):
         self.annotations = annotations
-        self.level = level
         self.project = project
+        self.layer_name = layer_name
+        self.feature_name = feature_name
+
+    @property
+    def level(self):
+        return 'layer' if self.feature_name is None else 'feature'
 
     @property
     def document_annotator_matrix(self):
@@ -104,12 +112,9 @@ class View:
         annotations = self.annotations
         if grouped_by is not None:
             annotations = self.annotations.groupby(grouped_by)
-        return annotations.value_counts()
+        return annotations['annotation'].value_counts()
 
     def iaa(self, measure='pairwise_kappa', level='nominal'):
-        if self.level == 'layer':
-            raise ValueError('Inter-Annotator Agreement is only implemented on "annotation" level.')
-
         matrix = self.document_annotator_matrix
 
         if measure == 'pairwise_kappa':
@@ -119,11 +124,8 @@ class View:
                 annotator_a, annotator_b = pair
                 data = matrix[list(pair)].dropna().values.T
                 n = data.shape[1]
-
                 score = cohen_kappa_score(data[0], data[1])
-
                 entries.append((annotator_a, annotator_b, n, score))
-
             return pd.DataFrame(entries, columns=['a', 'b', 'n', 'kappa']).set_index(['a', 'b'])
 
         if measure == 'krippendorff':
