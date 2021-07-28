@@ -1,16 +1,25 @@
 import cassis
 import pandas as pd
 from itertools import combinations
-from functools import lru_cache
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip
+from typing import Union, Sequence
+
 
 class Project:
     @classmethod
-    def from_zipped_xmi(cls, project_zip):
-        annotations = annotation_info_from_xmi_zip(project_zip)
-        return cls(annotations, project_zip, 'xmi')
+    def from_zipped_xmi(cls, project_path):
+        """
+        Loads an Inception project exported to XMI format, located at the given path.
+
+        Args:
+            project_path (str): A string representing the path to the exported project.
+
+        Returns: The Project Object.
+        """
+        annotations = annotation_info_from_xmi_zip(project_path)
+        return cls(annotations, project_path, 'xmi')
 
     def __init__(self, annotations, project_path, export_format):
         self._annotation_info = pd.DataFrame(annotations, columns=['cas', 'source_file', 'annotator'])
@@ -19,26 +28,32 @@ class Project:
 
     @property
     def typesystem(self):
+        """Returns the Typesystem used by the CAS Objects in the Project."""
         return self._annotation_info.loc[0, 'cas'].typesystem
 
     @property
-    def layers(self):
+    def layers(self) -> list[str]:
+        """Returns a list of all layer names in the project."""
         return [t.name for t in self.typesystem.get_types()]
 
     @property
-    def custom_layers(self):
+    def custom_layers(self) -> list[str]:
+        """Returns a list of all custom layer names in the project."""
         return [l for l in self.layers if l.startswith('webanno.custom')]
 
     @property
-    def source_file_names(self):
+    def source_file_names(self) -> list[str]:
+        """Returns a list of all source file names that have at least a single annotation attached."""
         return self._unique_entries('source_file')
 
     @property
-    def annotators(self):
+    def annotators(self) -> list[str]:
+        """Returns a list of all annotator names with at least a single annotation in the project."""
         return self._unique_entries('annotator')
 
     @property
-    def cas_objects(self):
+    def cas_objects(self) -> list[cassis.Cas]:
+        """Returns a list with all CAS Objects in the project."""
         return self._annotation_info['cas'].tolist()
 
     def _unique_entries(self, info_type):
@@ -55,10 +70,26 @@ class Project:
 
         return df
 
-    def features(self, layer_name):
+    def features(self, layer_name: str) -> list[str]:
+        """A list of all feature names for the given layer name."""
         return [f.name for f in self.typesystem.get_type(extend_layer_name(layer_name)).all_features]
 
-    def select(self, layer_name, feature_name=None, annotators=None, source_files=None):
+    def select(self,
+               layer_name: str,
+               feature_name: Union[str, None] = None,
+               annotators: Union[str, list[str], None] = None,
+               source_files: Union[str, list[str], None] = None):
+        """
+        Returns a View object, based on the specified selection parameters.
+
+        Args:
+            layer_name: Name of the layer to select.
+            feature_name: Name of the feature to select or None, if a view on the layer is desired.
+            annotators: List of annotators to be included. A single annotator can be selected by passing a string. If None is provided, all annotators are included in the view.
+            source_files: List of source files to be included. A single source file can be selected by passing a string. If None is provided, all annotators are included in the view.
+
+        Returns: The resulting View.
+        """
         layer_name = extend_layer_name(layer_name)
         level = 'layer' if feature_name is None else 'feature'
 
@@ -99,20 +130,39 @@ class View:
 
     @property
     def level(self):
+        """Returns whether the view represents a Layer or a specific Feature of a Layer"""
         return 'layer' if self.feature_name is None else 'feature'
 
     @property
-    def document_annotator_matrix(self):
+    def document_annotator_matrix(self) -> pd.DataFrame:
+        """Returns a Dataframe with document names as indices and annotator names als """
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
         return self.annotations.loc[~self.annotations.index.duplicated(), 'annotation'].unstack()
 
-    def counts(self, grouped_by=None):
+    def counts(self, grouped_by: Union[str, Sequence[str]] = None) -> pd.Series:
+        """
+        Returns a Series containing value counts of the feature included in the view.
+
+        Args:
+            grouped_by: Name of the variable to group the counts by, either "annotator", "source_file" or both, passed as a list. If a list is given, the order of the variables determines the nesting order.
+
+        Returns: A Series with all feature values, possibly grouped by variables.
+        """
         annotations = self.annotations
         if grouped_by is not None:
             annotations = self.annotations.groupby(grouped_by)
         return annotations['annotation'].value_counts()
 
     def iaa(self, measure='pairwise_kappa', level='nominal'):
+        """
+        Returns inter-annotator agreement statistics for features in the view.
+
+        Args:
+            measure: Name of the measure to use, either 'pairwise_kappa' (default), or 'krippendorff'. When 'pairwise_kappa' is selected, a Series with annotator names as indices is returned.
+            level: Variable scale to use, when calculating Krippendorff's Alpha. Valid values are 'nominal' (default), 'ordinal' and 'interval'.
+
+        Returns: Either a float with Krippendorff's Alpha or a Series with pairwise Cohen's Kappas between Annotators.
+        """
         matrix = self.document_annotator_matrix
 
         if measure == 'pairwise_kappa':
