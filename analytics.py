@@ -6,7 +6,6 @@ from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip
 
-
 class Project:
     @classmethod
     def from_zipped_xmi(cls, project_zip):
@@ -59,8 +58,7 @@ class Project:
     def features(self, layer_name):
         return [f.name for f in self.typesystem.get_type(extend_layer_name(layer_name)).all_features]
 
-    @lru_cache(maxsize=4)
-    def view(self, layer_name, feature_name=None, annotators=None, source_files=None):
+    def select(self, layer_name, feature_name=None, annotators=None, source_files=None):
         layer_name = extend_layer_name(layer_name)
         level = 'layer' if feature_name is None else 'feature'
 
