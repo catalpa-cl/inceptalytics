@@ -2,3 +2,5 @@ dkpro-cassis
 pandas
 scikit-learn
 krippendorff
+streamlit
+plotly

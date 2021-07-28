@@ -11,4 +11,4 @@ if [ ! -d $venv_dir ]; then
 fi
 
 source $venv_dir/bin/activate
-streamlit run main.py
+streamlit run streamlit.py
