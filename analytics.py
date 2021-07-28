@@ -4,7 +4,7 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip
-from typing import Union, Sequence
+from typing import Union, Sequence, List
 
 
 class Project:
@@ -25,6 +25,7 @@ class Project:
         self._annotation_info = pd.DataFrame(annotations, columns=['cas', 'source_file', 'annotator'])
         self.path = project_path
         self.export_format = export_format
+        self.layer_feature_separator = '>'
 
     @property
     def typesystem(self):
@@ -32,27 +33,27 @@ class Project:
         return self._annotation_info.loc[0, 'cas'].typesystem
 
     @property
-    def layers(self) -> list[str]:
+    def layers(self) -> List[str]:
         """Returns a list of all layer names in the project."""
         return [t.name for t in self.typesystem.get_types()]
 
     @property
-    def custom_layers(self) -> list[str]:
+    def custom_layers(self) -> List[str]:
         """Returns a list of all custom layer names in the project."""
         return [l for l in self.layers if l.startswith('webanno.custom')]
 
     @property
-    def source_file_names(self) -> list[str]:
+    def source_file_names(self) -> List[str]:
         """Returns a list of all source file names that have at least a single annotation attached."""
         return self._unique_entries('source_file')
 
     @property
-    def annotators(self) -> list[str]:
+    def annotators(self) -> List[str]:
         """Returns a list of all annotator names with at least a single annotation in the project."""
         return self._unique_entries('annotator')
 
     @property
-    def cas_objects(self) -> list[cassis.Cas]:
+    def cas_objects(self) -> List[cassis.Cas]:
         """Returns a list with all CAS Objects in the project."""
         return self._annotation_info['cas'].tolist()
 
@@ -70,26 +71,25 @@ class Project:
 
         return df
 
-    def features(self, layer_name: str) -> list[str]:
+    def features(self, layer_name: str) -> List[str]:
         """A list of all feature names for the given layer name."""
         return [f.name for f in self.typesystem.get_type(extend_layer_name(layer_name)).all_features]
 
     def select(self,
-               layer_name: str,
-               feature_name: Union[str, None] = None,
-               annotators: Union[str, list[str], None] = None,
-               source_files: Union[str, list[str], None] = None):
+               annotation: str,
+               annotators: Union[str, List[str], None] = None,
+               source_files: Union[str, List[str], None] = None):
         """
         Returns a View object, based on the specified selection parameters.
 
         Args:
-            layer_name: Name of the layer to select.
-            feature_name: Name of the feature to select or None, if a view on the layer is desired.
+            annotation: String specifying the annotation to select (combination of layer and feature name). Feature names must be separated from the layer names by the project's separator. If no feature is specified, the text covered by the annotation is used as the layer's feature.
             annotators: List of annotators to be included. A single annotator can be selected by passing a string. If None is provided, all annotators are included in the view.
             source_files: List of source files to be included. A single source file can be selected by passing a string. If None is provided, all annotators are included in the view.
 
         Returns: The resulting View.
         """
+        layer_name, feature_name = self._layer_feature_split(annotation)
         layer_name = extend_layer_name(layer_name)
         level = 'layer' if feature_name is None else 'feature'
 
@@ -97,6 +97,13 @@ class Project:
         annotations = self._annotations(info, layer_name, feature_name)
 
         return View(annotations, self, level)
+
+    def _layer_feature_split(self, layer_feature_string):
+        split = layer_feature_string.rsplit(self.layer_feature_separator, 1)
+        if len(split) == 2:
+            return split
+        else:
+            return split[0], None
 
     @staticmethod
     def _annotations(annotation_info, layer_name, feature_name):
