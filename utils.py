@@ -18,7 +18,10 @@ UIMA_TO_PANDAS_TYPE_MAP = {
 
 
 def get_dtype(typesystem, layer_name, feature_name):
-    uima_type = typesystem.get_type(layer_name).get_feature(feature_name).rangeTypeName
+    try:
+        uima_type = typesystem.get_type(layer_name).get_feature(feature_name).rangeTypeName
+    except AttributeError:
+        return None
     return UIMA_TO_PANDAS_TYPE_MAP.get(uima_type, 'object')
 
 
