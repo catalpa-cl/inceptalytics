@@ -156,6 +156,10 @@ class View:
         return self._annotation_dataframe['annotation']
 
     @property
+    def data_frame(self) -> pd.DataFrame:
+        return self._annotation_dataframe.reset_index()
+
+    @property
     def document_annotator_matrix(self) -> pd.DataFrame:
         """Returns a Dataframe with document names as indices and annotator names als """
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
