@@ -1,8 +1,8 @@
-import pandas as pd
 import streamlit as st
-import sys
-sys.path.append("..") 
+import pandas as pd
+import numpy as np
 from analytics import Project
+from utils import construct_feature_path
 
 @st.cache
 def load_project(file):
@@ -10,13 +10,18 @@ def load_project(file):
 
 st.set_page_config("Inception Analytics", None, "wide", "auto")
 
+body, stats = st.beta_columns([3, 1])
+
+body.write(
 """
 # Inception Analytics
 
 More than you ever wanted to know about your annotation project
 """
+)
 
-uploaded_file = st.file_uploader("Upload inception export file (zipped XMI format)")
+#uploaded_file = st.sidebar.file_uploader("Upload inception export file (zipped XMI format)")
+uploaded_file = open("/Users/zesch/git/inception-analytics/data/Gruppenannotation_project_2021-07-13_0813.zip", "rb")
 
 project = None
 
@@ -51,6 +56,28 @@ if project:
         key="files_select",
     )
 
-    annotation_select = layer + '>' + feature
-    view = project.select(annotation=annotation_select, annotators=selected_annotators, source_files=selected_files)
-    st.write(view.counts())
+    view = project.select(
+        annotation=construct_feature_path(layer, feature), 
+        annotators=selected_annotators, 
+        source_files=selected_files
+    )
+
+    nr_of_annotated_files = len(project.source_file_names)
+    nr_of_all_files = nr_of_annotated_files + len(project.empty_source_file_names)
+
+    stats.write("## Project Stats")
+    stats.write('Nr custom layers: ' + str(len(project.custom_layers)))
+    stats.write('Nr annotators: ' + str(len(project.annotators)))
+    stats.write(f"Nr files (annotated / all): {nr_of_annotated_files}/{nr_of_all_files}")
+
+    stats.write("## Current View")
+    stats.write('Selected annotators: ' + str(len(selected_annotators)))
+    stats.write('Selected files: ' + str(len(selected_files)))
+
+    body.write(view.count(['annotator', 'source_file']))
+
+    body.write(view.iaa())
+
+    body.write(view.progress_chart())
+    
+#   body.write(view.confusion_matrix_plots())

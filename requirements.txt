@@ -4,3 +4,4 @@ scikit-learn
 krippendorff
 streamlit
 plotly
+seaborn

@@ -1,6 +1,7 @@
 import cassis
 import pandas as pd
 import numpy as np
+import plotly.graph_objects as go
 from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
@@ -301,3 +302,23 @@ class View:
             categories = matrix.stack().unique()
             category_to_index = {category: i for i, category in enumerate(categories)}
             return alpha(matrix.replace(category_to_index).values.T, level_of_measurement=level)
+
+    def progress_chart(self):
+        annotators = self.annotations.reset_index()['annotator'].unique()
+        annotated_files = self.project.source_file_names
+        not_annotated_files = self.project.empty_source_file_names
+        all_files = sorted(annotated_files + not_annotated_files)
+
+        counts = self.count(['annotator', 'source_file'], include_empty_files=True).values
+        shaped = np.reshape(counts, (-1, len(annotators)))
+        fig = go.Figure(data=go.Heatmap(
+            z=shaped,
+            x=annotators,
+            y=all_files,
+            colorscale='Blues'))
+
+        fig.update_layout(
+            title='annotations per annotator per file',
+            yaxis_nticks=0)
+
+        return fig

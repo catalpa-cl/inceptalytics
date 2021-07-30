@@ -33,6 +33,8 @@ def get_dtype(typesystem, layer_name, feature_name):
 def extend_layer_name(layer_name, prefix='webanno.custom'):
     return f'{prefix}.{layer_name}' if len(layer_name.split('.')) == 1 else layer_name
 
+def construct_feature_path(layer, feature):
+    return f'{layer}>{feature}'
 
 ###
 # IO Utils
