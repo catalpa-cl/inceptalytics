@@ -36,7 +36,13 @@ def extend_layer_name(layer_name, prefix='webanno.custom'):
 # IO Utils
 ###
 
-def annotation_info_from_xmi_zip(project_zip):
+def annotation_info_from_xmi_zip(project_zip: str):
+    """
+    Returns a list of tuples containing information about annotations. Tuples contain (CAS, Source File Name, Annotator name).
+
+    Args:
+        project_zip: String representing a path to an Inception XMI export.
+    """
     annotations = []
     with ZipFile(project_zip) as project_zip:
         annotation_zips = (fp for fp in project_zip.namelist() if
@@ -52,6 +58,17 @@ def annotation_info_from_xmi_zip(project_zip):
 
                 annotations.append((cas, source_file, annotator))
     return annotations
+
+
+def source_files_from_xmi_zip(project_zip: str):
+    """
+        Returns the list of all source file names of the project.
+
+        Args:
+            project_zip: String representing a path to an exported Inception XMI export.
+    """
+    with ZipFile(project_zip) as project_zip:
+        return [fp.split('/', 1)[1] for fp in project_zip.namelist() if fp.startswith('source/')]
 
 
 def get_annotated_file_names(project_zip) -> tuple:

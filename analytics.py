@@ -1,9 +1,10 @@
 import cassis
 import pandas as pd
+import numpy as np
 from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
-from utils import extend_layer_name, annotation_info_from_xmi_zip, get_dtype
+from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype
 from typing import Union, Sequence, List
 
 
@@ -17,13 +18,15 @@ class Project:
             project_path (str): A string representing the path to the exported project.
         """
         annotations = annotation_info_from_xmi_zip(project_path)
-        return cls(annotations, project_path, 'xmi')
+        source_files = source_files_from_xmi_zip(project_path)
+        return cls(annotations, source_files, project_path, 'xmi')
 
-    def __init__(self, annotations, project_path, export_format):
+    def __init__(self, annotations, source_files, project_path, export_format):
         self._annotation_info = pd.DataFrame(annotations, columns=['cas', 'source_file', 'annotator'])
         self.path = project_path
         self.export_format = export_format
         self.layer_feature_separator = '>'
+        self.all_source_file_names = source_files
 
     @property
     def typesystem(self):
@@ -44,6 +47,14 @@ class Project:
     def source_file_names(self) -> List[str]:
         """Returns a list of all source file names that have at least a single annotation attached."""
         return self._unique_entries('source_file')
+
+    @property
+    def empty_source_file_names(self) -> List[str]:
+        """Returns a list of all source file names that are not annotated."""
+        annotated = np.asarray(self.source_file_names)
+        all = np.asarray(self.all_source_file_names)
+        mask = np.isin(all, annotated, invert=True)
+        return all[mask].tolist()
 
     @property
     def annotators(self) -> List[str]:
@@ -93,9 +104,13 @@ class Project:
         Returns a View object, based on the specified selection parameters.
 
         Args:
-            annotation: String specifying the annotation to select (combination of layer and feature name). Feature names must be separated from the layer names by the project's separator. If no feature is specified, the text covered by the annotation is used as the layer's feature.
-            annotators: List of annotators to be included. A single annotator can be selected by passing a string. If None is provided, all annotators are included in the view.
-            source_files: List of source files to be included. A single source file can be selected by passing a string. If None is provided, all annotators are included in the view.
+            annotation: String specifying the annotation to select (combination of layer and feature name). Feature
+                names must be separated from the layer names by the project's separator. If no feature is specified, the
+                text covered by the annotation is used as the layer's feature.
+            annotators: List of annotators to be included. A single annotator can be selected by passing a string. If
+                None is provided, all annotators are included in the view.
+            source_files: List of source files to be included. A single source file can be selected by passing a string.
+                If None is provided, all annotators are included in the view.
         """
         layer_name, feature_name = self._layer_feature_split(annotation)
         layer_name = extend_layer_name(layer_name)
@@ -165,27 +180,66 @@ class View:
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
         return self._annotation_dataframe.loc[~self._annotation_dataframe.index.duplicated(), 'annotation'].unstack()
 
-    def counts(self, grouped_by: Union[str, Sequence[str]] = None) -> pd.Series:
+    def value_counts(self, grouped_by: Union[str, Sequence[str]] = None, include_empty_files=False) -> pd.Series:
         """
         Returns a Series containing value counts of the feature included in the view.
 
         Args:
-            grouped_by: Name of the variable to group the counts by, either "annotator", "source_file" or a list containing both. If a list is given, the order of the variables determines the nesting order.
+            grouped_by: Name of the variable to group the counts by, either "annotator", "source_file" or a list
+                containing both. If a list is given, the order of the variables determines the nesting order.
         """
         annotations = self._annotation_dataframe
         if grouped_by is not None:
             annotations = self._annotation_dataframe.groupby(grouped_by)
         return annotations['annotation'].value_counts()
 
+    def count(self, grouped_by=None, include_empty_files=False):
+        """
+        Returns a Series containing number of annotations included in the view.
+
+        Args:
+            grouped_by: Name of the variable to group the counts by, either "annotator", "source_file" or a list
+                containing both. If a list is given, the order of the variables determines the nesting order.
+            include_empty_files: If True, empty files will be included in the output. Ignored when grouped_by is None.
+        """
+        annotations = self._annotation_dataframe.copy().drop(columns=['_annotation', 'text'])
+
+        if include_empty_files and grouped_by:
+            annotators = annotations.reset_index()['annotator'].unique()
+            unannotated_files = self.project.all_source_file_names
+            dummy_entries = []
+
+            for annotator in annotators:
+                for file in unannotated_files:
+                    dummy_entries.append((file, -1, -1, annotator, 'NA'))
+
+            annotations = pd.DataFrame(dummy_entries, columns=annotations.reset_index().columns)\
+                .set_index(annotations.index.names)\
+                .append(annotations)
+
+        if grouped_by is not None:
+            annotations = annotations.groupby(grouped_by)
+            if isinstance(grouped_by, str) or len(grouped_by) == 1:
+                group_levels = 0
+            else:
+                group_levels = 2
+
+        counts = annotations['annotation'].count()
+
+        if include_empty_files and grouped_by:
+            counts -= len(annotators) - group_levels  # account for dummy entries
+
+        return counts
+
     def iaa(self, measure='pairwise_kappa', level='nominal'):
         """
         Returns inter-annotator agreement statistics for features in the view.
 
         Args:
-            measure: Name of the measure to use, either 'pairwise_kappa' (default), or 'krippendorff'. When 'pairwise_kappa' is selected, a Series with annotator names as indices is returned.
-            level: Variable scale to use, when calculating Krippendorff's Alpha. Valid values are 'nominal' (default), 'ordinal' and 'interval'.
-
-        Returns: Either a float with Krippendorff's Alpha or a Series with pairwise Cohen's Kappas between Annotators.
+            measure: Name of the measure to use, either 'pairwise_kappa' (default), or 'krippendorff'. When
+                'pairwise_kappa' is selected, a Series with annotator names as indices is returned.
+            level: Variable scale to use, when calculating Krippendorff's Alpha. Valid values are 'nominal' (default),
+                'ordinal' and 'interval'.
         """
         matrix = self.document_annotator_matrix
 
