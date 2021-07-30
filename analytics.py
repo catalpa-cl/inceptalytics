@@ -6,7 +6,7 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
-    confusion_matrix, heatmap
+    confusion_matrix, heatmap, percentage_agreement
 from typing import Union, Sequence, List
 
 
@@ -156,6 +156,15 @@ class Project:
 
 
 class View:
+    _pairwise_iaa_measures = {
+        'kappa': cohen_kappa_score,
+        'percentage': percentage_agreement
+    }
+
+    _aggregate_iaa_measures = {
+        'krippendorff': alpha,
+    }
+
     def __init__(self, annotations, project, layer_name, feature_name=None):
         self._annotation_dataframe = annotations
         self.project = project
@@ -243,8 +252,11 @@ class View:
         counts = annotations['annotation'].count()
 
         if include_empty_files and grouped_by:
-            overcount = len(annotators) if isinstance(grouped_by, str) or len(grouped_by) == 1 else 1
-            counts -= overcount  # account for dummy entries
+            if isinstance(grouped_by, str) or len(grouped_by) == 1:
+                overcount = len(annotators)  # 1 grouping level
+            else:
+                overcount = 1  # 2 grouping levels
+            counts -= overcount
 
         return counts
 
@@ -272,36 +284,56 @@ class View:
         """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
         return self.confusion_matrices().apply(heatmap)
 
-    def iaa_pairwise(self, measuer='kappa', level='nominal'):
-        pass
+    def iaa_pairwise(self, measure='kappa') -> pd.Series:
+        """
+        Returns a Series of pairwise inter-annotator agreement statistics for all annotators.
 
-    def iaa(self, measure='pairwise_kappa', level='nominal'):
+        Args:
+            measure: Name of the measure to use, either 'kappa' (default), 'percentage'.
+        """
+        if measure in self._pairwise_iaa_measures:
+            agreement_fn = self._pairwise_iaa_measures.get(measure)
+        else:
+            raise ValueError(f'"measure" must be one of {self._pairwise_iaa_measures.keys()}, but was "{measure}"!')
+
+        annotators = self.annotators
+        M = self.document_annotator_matrix
+
+        entries = []
+        for pair in combinations(annotators, 2):
+            a, b = pair
+            data = M[list(pair)].dropna()
+            n = len(data)
+            score = agreement_fn(data[a], data[b])
+            entries.append((a, b, n, score))
+
+        return pd.DataFrame(entries, columns=['a', 'b', 'n', measure]).set_index(['a', 'b'])
+
+    def iaa(self, measure='krippendorff', level='nominal') -> float:
         """
         Returns inter-annotator agreement statistics for features in the view.
 
         Args:
-            measure: Name of the measure to use, either 'pairwise_kappa' (default), or 'krippendorff'. When
-                'pairwise_kappa' is selected, a Series with annotator names as indices is returned.
+            measure: Name of the measure to use, either 'krippendorff' for Krippendorff's Alpha (default) or 'kappa',
+                for average pairwise Cohen's Kappa score.
             level: Variable scale to use, when calculating Krippendorff's Alpha. Valid values are 'nominal' (default),
                 'ordinal' and 'interval'.
         """
-        matrix = self.document_annotator_matrix
-
-        if measure == 'pairwise_kappa':
-            annotators = matrix.columns
-            entries = []
-            for pair in combinations(annotators, 2):
-                annotator_a, annotator_b = pair
-                data = matrix[list(pair)].dropna().values.T
-                n = data.shape[1]
-                score = cohen_kappa_score(data[0], data[1])
-                entries.append((annotator_a, annotator_b, n, score))
-            return pd.DataFrame(entries, columns=['a', 'b', 'n', 'kappa']).set_index(['a', 'b'])
+        M = self.document_annotator_matrix
 
         if measure == 'krippendorff':
-            categories = matrix.stack().unique()
-            category_to_index = {category: i for i, category in enumerate(categories)}
-            return alpha(matrix.replace(category_to_index).values.T, level_of_measurement=level)
+            if level == 'nominal':
+                category_to_index = {category: i for i, category in enumerate(self.labels)}
+                M.replace(category_to_index, inplace=True)
+
+            return alpha(M.values.T, level_of_measurement=level)
+
+        if measure in self._pairwise_iaa_measures:
+            scores = self.iaa_pairwise(measure)
+            return np.average(scores[measure], weights=scores['n'])
+
+        possible_measures = list(self._aggregate_iaa_measures.keys()) + list(self._pairwise_iaa_measures.keys())
+        raise ValueError(f'"measure" must be one of {possible_measures}, but was "{measure}"!')
 
     def progress_chart(self):
         annotators = self.annotations.reset_index()['annotator'].unique()

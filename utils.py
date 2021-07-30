@@ -125,6 +125,11 @@ def confusion_matrix(da_matrix: pd.DataFrame,
     return conf_mat(annos_a, annos_b, labels=labels)
 
 
+def percentage_agreement(a, b):
+    a = np.asarray(a)
+    b = np.asarray(b)
+    return sum(a == b) / a.shape[0]
+
 ###
 # Plotting
 ###
