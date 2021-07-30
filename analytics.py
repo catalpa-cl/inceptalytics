@@ -238,15 +238,12 @@ class View:
 
         if grouped_by is not None:
             annotations = annotations.groupby(grouped_by)
-            if isinstance(grouped_by, str) or len(grouped_by) == 1:
-                group_levels = 0
-            else:
-                group_levels = 2
 
         counts = annotations['annotation'].count()
 
         if include_empty_files and grouped_by:
-            counts -= len(annotators) - group_levels  # account for dummy entries
+            overcount = len(annotators) if isinstance(grouped_by, str) or len(grouped_by) == 1 else 1
+            counts -= overcount  # account for dummy entries
 
         return counts
 
@@ -273,6 +270,9 @@ class View:
     def confusion_matrix_plots(self):
         """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
         return self.confusion_matrices().apply(heatmap)
+
+    def iaa_pairwise(self, measuer='kappa', level='nominal'):
+        pass
 
     def iaa(self, measure='pairwise_kappa', level='nominal'):
         """
