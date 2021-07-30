@@ -4,7 +4,8 @@ import numpy as np
 from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
-from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype
+from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
+    confusion_matrix, heatmap
 from typing import Union, Sequence, List
 
 
@@ -98,8 +99,8 @@ class Project:
 
     def select(self,
                annotation: str,
-               annotators: Union[str, List[str], None] = None,
-               source_files: Union[str, List[str], None] = None):
+               annotators: Union[str, List[str]] = None,
+               source_files: Union[str, List[str]] = None):
         """
         Returns a View object, based on the specified selection parameters.
 
@@ -171,7 +172,25 @@ class View:
         return self._annotation_dataframe['annotation']
 
     @property
+    def texts(self) -> pd.Series:
+        """Returns a Series of all texts covered by annotations in the view."""
+        return self._annotation_dataframe['text']
+
+    @property
+    def annotators(self) -> List[str]:
+        """Returns a list containing all annotators in the view."""
+        return self.data_frame['annotator'].unique().tolist()
+
+    @property
+    def labels(self) -> List[any]:
+        """Returns a list of all unique annotation values"""
+        labels = self.annotations.unique()
+        labels.sort()
+        return labels.tolist()
+
+    @property
     def data_frame(self) -> pd.DataFrame:
+        """Returns a DataFrame with annotation information."""
         return self._annotation_dataframe.reset_index()
 
     @property
@@ -230,6 +249,30 @@ class View:
             counts -= len(annotators) - group_levels  # account for dummy entries
 
         return counts
+
+    def confusion_matrices(self) -> pd.Series:
+        """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
+        if len(self.annotators) < 2:
+            return pd.Series(dtype='object')
+
+        M = self.document_annotator_matrix
+        pairs = [list(pair) for pair in combinations(self.annotators, 2)]
+        labels = self.labels
+
+        entries = []
+        for pair in pairs:
+            a, b = pair
+            cm = confusion_matrix(M, pair, labels)
+            cm_df = pd.DataFrame(cm, index=labels, columns=labels).rename_axis(index=a, columns=b)
+            entries.append((a, b, cm_df))
+
+        index = ['a', 'b']
+        name = 'confusion_matrix'
+        return pd.DataFrame(entries, columns=[*index, name]).set_index(index)[name]
+
+    def confusion_matrix_plots(self):
+        """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
+        return self.confusion_matrices().apply(heatmap)
 
     def iaa(self, measure='pairwise_kappa', level='nominal'):
         """

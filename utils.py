@@ -5,8 +5,10 @@ from pathlib import Path
 from zipfile import ZipFile
 import pandas as pd
 import seaborn as sns
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix as conf_mat
 import numpy as np
+from typing import List, Union
+from matplotlib.figure import Figure
 
 ###
 # UIMA / Cassis Utils
@@ -62,10 +64,10 @@ def annotation_info_from_xmi_zip(project_zip: str):
 
 def source_files_from_xmi_zip(project_zip: str):
     """
-        Returns the list of all source file names of the project.
+    Returns the list of all source file names of the project.
 
-        Args:
-            project_zip: String representing a path to an exported Inception XMI export.
+    Args:
+        project_zip: String representing a path to an exported Inception XMI export.
     """
     with ZipFile(project_zip) as project_zip:
         return [fp.split('/', 1)[1] for fp in project_zip.namelist() if fp.startswith('source/')]
@@ -97,61 +99,43 @@ def extract_project_files(project_zip, target_path: str, folder_name='annotation
                         sub_zip_file.extractall(target_path + file.split('.')[0])
                     os.remove(target_path + file)
 
+###
+# Statistics
+###
 
-def heatmap(annotations_a: pd.Series,
-            annotations_b: pd.Series,
-            labels=[],
-            catch_all_labels=[],
-            annotator_names=[],
-            na_value='NA'):
-    annotations = annotations_a.append(annotations_b)
 
-    if not labels:
-        labels = annotations.unique()
-        labels.sort()
+def confusion_matrix(da_matrix: pd.DataFrame,
+                     annotators: Union[List[int], List[str]],
+                     labels: List[any] = None) -> pd.DataFrame:
+    if labels is None:
+        labels = da_matrix.stack().unique()
 
-    # move catch-all categories to end of list
-    if catch_all_labels:
-        labels = [val for val in labels if val not in catch_all_labels] + catch_all_labels
+    M = da_matrix[annotators].dropna()
+    a, b = annotators
 
-    # limit to cases that both annotators annotated
-    annotations = annotations[~annotations.index.duplicated()].unstack().fillna(na_value)
-
-    if annotator_names:
-        annotator_a, annotator_b = annotator_names[:2]
+    if isinstance(a, int):
+        annos_a = M.iloc[:, a]
+        annos_b = M.iloc[:, b]
     else:
-        annotator_a, annotator_b = annotations
+        annos_a = M.loc[:, a]
+        annos_b = M.loc[:, b]
+
+    return conf_mat(annos_a, annos_b, labels=labels)
 
 
-    # generate confusion matrix
-    cm = confusion_matrix(annotations[annotator_a],
-                          annotations[annotator_b],
-                          labels=labels)
-    cm_df = pd.DataFrame(cm, columns=labels, index=labels)
+###
+# Plotting
+###
 
-    # generate heatmap figure
-    diagonal = np.eye(cm.shape[0], dtype=bool)
-    max_no_diag = cm[~diagonal].max()
-    fig = sns.heatmap(cm_df, cmap='seismic', center=0, square=True, annot=True,
-                      vmax=max_no_diag, cbar=False, fmt='d')
+def heatmap(confusion_matrix: pd.DataFrame) -> Figure:
+    ax = sns.heatmap(confusion_matrix, square=True, annot=True, cbar=False, fmt='d', cmap='YlGnBu')
 
-    # add labels
-    fig.set_ylabel(annotator_a, fontsize=14)
-    fig.set_xlabel(annotator_b, fontsize=14)
-    fig.set_xticklabels(labels, rotation=45, ha='right')
+    maxlen_x, maxlen_y = 12, 16
+    ylabels = [label if len(label) < maxlen_y else label[:maxlen_y - 1] + '.' for label in confusion_matrix.columns]
+    xlabels = [label if len(label) < maxlen_x else label[:maxlen_x - 1] + '.' for label in confusion_matrix.columns]
+    ax.set_yticklabels(ylabels)
+    ax.set_xticklabels(xlabels, rotation=45, ha='right')
 
-    # add dashed separator line for catch-all categories
-    if catch_all_labels:
-        n_none_labels = len(catch_all_labels)
-        w = fig.get_xticks()
-        h = fig.get_yticks()
-        xmax = (w[-n_none_labels] + w[-n_none_labels - 1]) / 2
-        ymax = (h[-n_none_labels] + h[-n_none_labels - 1]) / 2
-        fig.hlines(y=ymax, xmin=0, xmax=xmax, linestyles='dashed', colors='black', linewidth=0.66)
-        fig.vlines(x=xmax, ymin=0, ymax=ymax, linestyles='dashed', colors='black', linewidth=0.66)
-
-    # size figure
-    fig.get_figure().set_size_inches(5.5, 5.5)
-    fig.get_figure().tight_layout()
-
-    return fig.get_figure(), cm, labels
+    fig = ax.get_figure()
+    fig.tight_layout()
+    return fig
