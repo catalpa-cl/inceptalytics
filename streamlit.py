@@ -76,7 +76,7 @@ if project:
 
     body.write(view.count(['annotator', 'source_file']))
 
-    body.write(view.iaa())
+    body.write(view.iaa_pairwise())
 
     body.write(view.progress_chart())
     
