@@ -20,8 +20,7 @@ More than you ever wanted to know about your annotation project
 """
 )
 
-#uploaded_file = st.sidebar.file_uploader("Upload inception export file (zipped XMI format)")
-uploaded_file = open("/Users/zesch/git/inception-analytics/data/Gruppenannotation_project_2021-07-13_0813.zip", "rb")
+uploaded_file = st.sidebar.file_uploader("Upload inception export file (zipped XMI format)")
 
 project = None
 
@@ -76,8 +75,10 @@ if project:
 
     body.write(view.count(['annotator', 'source_file']))
 
+    body.write(view.iaa())
     body.write(view.iaa_pairwise())
 
     body.write(view.progress_chart())
+    body.write(view.progress_chart(include_empty_files=False))
     
 #   body.write(view.confusion_matrix_plots())

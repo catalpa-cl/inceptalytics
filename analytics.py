@@ -342,18 +342,21 @@ class View:
         possible_measures = list(self._aggregate_iaa_measures.keys()) + list(self._pairwise_iaa_measures.keys())
         raise ValueError(f'"measure" must be one of {possible_measures}, but was "{measure}"!')
 
-    def progress_chart(self):
+    def progress_chart(self, include_empty_files=True):
         annotators = self.annotations.reset_index()['annotator'].unique()
         annotated_files = self.project.source_file_names
         not_annotated_files = self.project.empty_source_file_names
-        all_files = sorted(annotated_files + not_annotated_files)
+        if include_empty_files:
+            files = sorted(annotated_files + not_annotated_files)
+        else:
+            files = sorted(annotated_files)
 
-        counts = self.count(['annotator', 'source_file'], include_empty_files=True).values
+        counts = self.count(['annotator', 'source_file'], include_empty_files=include_empty_files).values
         shaped = np.reshape(counts, (-1, len(annotators)))
         fig = go.Figure(data=go.Heatmap(
             z=shaped,
             x=annotators,
-            y=all_files,
+            y=files,
             colorscale='Blues'))
 
         fig.update_layout(
