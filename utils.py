@@ -16,6 +16,8 @@ from pyannote.core import Segment
 # UIMA / Cassis Utils
 ###
 
+SENTENCE_TYPE_NAME = 'de.tudarmstadt.ukp.dkpro.core.api.segmentation.type.Sentence'
+
 UIMA_TO_PANDAS_TYPE_MAP = {
     'uima.cas.Boolean': 'bool',
     'uima.cas.Integer': 'int',
@@ -141,7 +143,7 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
         return continuum.compute_gamma(dissimilarity).gamma
 
 
-    continuum_dfs = annotation_df[['source_file', 'annotator', 'begin', 'end', 'annotation']].groupby('source_file')
+    continuum_dfs = annotation_df[['sentence', 'annotator', 'begin', 'end', 'annotation']].groupby('sentence')
     diss = CombinedCategoricalDissimilarity()
     gammas = []
     for sf, df in continuum_dfs:

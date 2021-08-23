@@ -6,9 +6,8 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
-    confusion_matrix, heatmap, percentage_agreement, gamma_agreement
+    confusion_matrix, heatmap, percentage_agreement, gamma_agreement, SENTENCE_TYPE_NAME
 from typing import Union, Sequence, List
-
 
 class Project:
     @classmethod
@@ -130,15 +129,22 @@ class Project:
     def _annotations(self, annotation_info, layer_name, feature_name):
         entries = []
         for cas, source_file, annotator in annotation_info.itertuples(index=False, name=None):
-            try:
-                for annotation in cas.select(layer_name):
-                    entry = (annotation, annotation.get_covered_text(), source_file, annotation.begin, annotation.end, annotator)
-                    entries.append(entry)
-            except cassis.typesystem.TypeNotFoundError:
-                continue
-
-        columns = ['_annotation', 'text', 'source_file', 'begin', 'end', 'annotator']
-        index = ['source_file', 'begin', 'end', 'annotator']
+                for sentence in cas.select(SENTENCE_TYPE_NAME):
+                    try:
+                        for annotation in cas.select_covered(layer_name, sentence):
+                            sentence_id = f'{source_file}_{sentence.begin}-{sentence.end}'
+                            entry = (annotation,
+                                     annotation.get_covered_text(),
+                                     source_file,
+                                     sentence_id,
+                                     annotation.begin,
+                                     annotation.end,
+                                     annotator)
+                            entries.append(entry)
+                    except cassis.typesystem.TypeNotFoundError:
+                        continue
+        columns = ['_annotation', 'text', 'source_file', 'sentence', 'begin', 'end', 'annotator']
+        index = ['source_file', 'sentence', 'begin', 'end', 'annotator']
         annotations = pd.DataFrame(entries, columns=columns).set_index(index)
 
         if feature_name is not None:
