@@ -9,6 +9,8 @@ from sklearn.metrics import confusion_matrix as conf_mat
 import numpy as np
 from typing import List, Union
 from matplotlib.figure import Figure
+from pygamma_agreement import Continuum, CombinedCategoricalDissimilarity
+from pyannote.core import Segment
 
 ###
 # UIMA / Cassis Utils
@@ -129,6 +131,27 @@ def percentage_agreement(a, b):
     a = np.asarray(a)
     b = np.asarray(b)
     return sum(a == b) / a.shape[0]
+
+
+def gamma_agreement(annotation_df: pd.DataFrame) -> float:
+    def gamma_for_continuum(df, dissimilarity):
+        continuum = Continuum()
+        for _, _, annotator, begin, end, annotation in df.itertuples():
+            continuum.add(annotator, Segment(begin, end), annotation)
+        return continuum.compute_gamma(dissimilarity).gamma
+
+
+    continuum_dfs = annotation_df[['source_file', 'annotator', 'begin', 'end', 'annotation']].groupby('source_file')
+    diss = CombinedCategoricalDissimilarity()
+    gammas = []
+    for sf, df in continuum_dfs:
+        try:
+            gammas.append(gamma_for_continuum(df, diss))
+        except AssertionError:
+            print(f'Could not calculate gamma for source file "{sf}". Skipping.')
+
+    return np.mean(gammas)
+
 
 ###
 # Plotting

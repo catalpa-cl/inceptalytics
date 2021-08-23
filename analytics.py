@@ -6,7 +6,7 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
-    confusion_matrix, heatmap, percentage_agreement
+    confusion_matrix, heatmap, percentage_agreement, gamma_agreement
 from typing import Union, Sequence, List
 
 
@@ -163,6 +163,7 @@ class View:
 
     _aggregate_iaa_measures = {
         'krippendorff': alpha,
+        'gamma': gamma_agreement
     }
 
     def __init__(self, annotations, project, layer_name, feature_name=None):
@@ -321,12 +322,18 @@ class View:
         """
         M = self.document_annotator_matrix
 
-        if measure == 'krippendorff':
-            if level == 'nominal':
-                category_to_index = {category: i for i, category in enumerate(self.labels)}
-                M.replace(category_to_index, inplace=True)
+        if measure in self._aggregate_iaa_measures:
+            agreement_fn = self._aggregate_iaa_measures[measure]
 
-            return alpha(M.values.T, level_of_measurement=level)
+            if measure == 'krippendorff':
+                if level == 'nominal':
+                    category_to_index = {category: i for i, category in enumerate(self.labels)}
+                    M.replace(category_to_index, inplace=True)
+                return agreement_fn(M.values.T, level_of_measurement=level)
+
+            if measure == 'gamma':
+                M = self._annotation_dataframe.reset_index()
+                return agreement_fn(M)
 
         if measure in self._pairwise_iaa_measures:
             scores = self.iaa_pairwise(measure)

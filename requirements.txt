@@ -5,3 +5,4 @@ krippendorff
 streamlit
 plotly
 seaborn
+pygamma-agreement
