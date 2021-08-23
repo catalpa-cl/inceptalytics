@@ -10,7 +10,7 @@ def load_project(file):
 
 st.set_page_config("Inception Analytics", None, "wide", "auto")
 
-body, stats = st.beta_columns([3, 1])
+body, stats = st.columns([4, 1])
 
 body.write(
 """
@@ -40,7 +40,7 @@ if project:
 
 
     annotators = sorted(project.annotators)
-    selected_annotators = st.sidebar.beta_expander("Select annotators").multiselect(
+    selected_annotators = st.sidebar.multiselect(
         "Annotators",
         options=annotators,
         default=list(annotators),
@@ -48,7 +48,7 @@ if project:
     )
 
     files = sorted(project.source_file_names)
-    selected_files = st.sidebar.beta_expander("Select source files").multiselect(
+    selected_files = st.sidebar.multiselect(
         "Files",
         options=files,
         default=list(files),
@@ -75,7 +75,7 @@ if project:
 
     body.write(view.count(['annotator', 'source_file']))
 
-    body.write(view.iaa())
+    body.write(view.iaa(measure='gamma'))
     body.write(view.iaa_pairwise())
 
     body.write(view.progress_chart())
