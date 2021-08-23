@@ -140,7 +140,7 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
         continuum = Continuum()
         for _, _, annotator, begin, end, annotation in df.itertuples():
             continuum.add(annotator, Segment(begin, end), annotation)
-        return continuum.compute_gamma(dissimilarity).gamma
+        return continuum.compute_gamma(dissimilarity, fast = True).gamma
 
 
     continuum_dfs = annotation_df[['sentence', 'annotator', 'begin', 'end', 'annotation']].groupby('sentence')
