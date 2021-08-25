@@ -38,9 +38,13 @@ if project:
         sorted(project.features(layer))
     )
 
+    iaa_type = st.sidebar.selectbox(
+        'Select IAA type',
+        ['krippendorff','gamma']
+    )
 
     annotators = sorted(project.annotators)
-    selected_annotators = st.sidebar.multiselect(
+    selected_annotators = st.sidebar.expander('Select Annotators').multiselect(
         "Annotators",
         options=annotators,
         default=list(annotators),
@@ -48,7 +52,7 @@ if project:
     )
 
     files = sorted(project.source_file_names)
-    selected_files = st.sidebar.multiselect(
+    selected_files = st.sidebar.expander('Select Source Files').multiselect(
         "Files",
         options=files,
         default=list(files),
@@ -75,8 +79,8 @@ if project:
 
     body.write(view.count(['annotator', 'source_file']))
 
-    body.write(view.iaa(measure='krippendorff'))
-    body.write(view.iaa_pairwise())
+    body.write(view.iaa(measure=iaa_type))
+    body.write(view.pairwise_kappa())
 
     body.write(view.progress_chart())
     body.write(view.progress_chart(include_empty_files=False))
