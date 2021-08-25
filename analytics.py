@@ -158,6 +158,10 @@ class Project:
         else:
             annotations['annotation'] = annotations['text']
 
+        # map None value to 'None' String
+        # TODO check side effects of this
+        annotations['annotation'].replace(to_replace=[None], value='None', inplace=True)
+
         return annotations
 
 
@@ -238,7 +242,9 @@ class View:
                 containing both. If a list is given, the order of the variables determines the nesting order.
             include_empty_files: If True, empty files will be included in the output. Ignored when grouped_by is None.
         """
-        annotations = self._annotation_dataframe.copy().drop(columns=['_annotation', 'text'])
+        annotations = self._annotation_dataframe.copy()\
+            .drop(columns=['_annotation', 'text'])\
+            .droplevel('sentence')
 
         if include_empty_files and grouped_by:
             annotators = annotations.reset_index()['annotator'].unique()
@@ -349,18 +355,11 @@ class View:
         raise ValueError(f'"measure" must be one of {possible_measures}, but was "{measure}"!')
 
     def progress_chart(self, include_empty_files=True):
-        annotators = self.annotations.reset_index()['annotator'].unique()
-        annotated_files = self.project.source_file_names
-        not_annotated_files = self.project.empty_source_file_names
-        if include_empty_files:
-            files = sorted(annotated_files + not_annotated_files)
-        else:
-            files = sorted(annotated_files)
-
-        counts = self.count(['annotator', 'source_file'], include_empty_files=include_empty_files).values
-        shaped = np.reshape(counts, (-1, len(annotators)))
+        counts = self.count(['source_file', 'annotator'], include_empty_files=include_empty_files).unstack()
+        annotators = counts.columns
+        files = counts.index
         fig = go.Figure(data=go.Heatmap(
-            z=shaped,
+            z=counts,
             x=annotators,
             y=files,
             colorscale='Blues'))
