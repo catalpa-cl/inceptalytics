@@ -297,7 +297,7 @@ class View:
         """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
         return self.confusion_matrices().apply(heatmap)
 
-    def iaa_pairwise(self, measure='kappa') -> pd.Series:
+    def pairwise_kappa(self, measure='kappa') -> pd.Series:
         """
         Returns a Series of pairwise inter-annotator agreement statistics for all annotators.
 
