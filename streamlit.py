@@ -28,11 +28,20 @@ if uploaded_file:
     project = load_project(uploaded_file)
 
 if project:
+    ## if you already know which layers you are interested in, you may want to hard-code them here.
+    ## especially if you are using just some elements of the build-in layers 
+    layers = []
+    if project.custom_layers:
+        layers = sorted(project.custom_layers)
+    else:
+        layers = sorted(project.layers)
+
     layer = st.sidebar.selectbox(
         'Select Layer',
-        sorted(project.custom_layers)
+       layers,
+       format_func=lambda x: x.split('.')[-1]
     )
-
+    
     feature = st.sidebar.selectbox(
         'Select Feature',
         sorted(project.features(layer))
@@ -44,20 +53,28 @@ if project:
     )
 
     annotators = sorted(project.annotators)
-    selected_annotators = st.sidebar.expander('Select Annotators').multiselect(
-        "Annotators",
-        options=annotators,
-        default=list(annotators),
-        key="annotator_select",
-    )
+    if len(annotators) > 0:
+        selected_annotators = st.sidebar.expander('Select Annotators').multiselect(
+            "Annotators",
+            options=annotators,
+            default=list(annotators),
+            key="annotator_select",
+        )
+    else:
+        st.warning('No annotators found in the project.')
+        st.stop()
 
     files = sorted(project.source_file_names)
-    selected_files = st.sidebar.expander('Select Source Files').multiselect(
-        "Files",
-        options=files,
-        default=list(files),
-        key="files_select",
-    )
+    if len(files) > 0:
+        selected_files = st.sidebar.expander('Select Source Files').multiselect(
+            "Files",
+            options=files,
+            default=list(files),
+            key="files_select",
+        )
+    else:
+        st.warning('No source files found in the project.')
+        st.stop()
 
     view = project.select(
         annotation=construct_feature_path(layer, feature), 
@@ -79,10 +96,11 @@ if project:
 
     body.write(view.count(['annotator', 'source_file']))
 
-    body.write(view.iaa(measure=iaa_type))
+    iaa = view.iaa(measure=iaa_type)
+    body.metric(label=iaa_type, value=str(np.round(iaa, 4)))
     body.write(view.pairwise_kappa())
 
     body.write(view.progress_chart())
     body.write(view.progress_chart(include_empty_files=False))
     
-#   body.write(view.confusion_matrix_plots())
+    body.write(view.confusion_matrix_plots())
