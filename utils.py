@@ -58,7 +58,6 @@ def annotation_info_from_xmi_zip(project_zip: str):
         annotation_zips = (fp for fp in project_zip.namelist() if
                            regex.match(fp))
         for file_path in annotation_zips:
-            print(file_path)
             source_file = Path(file_path).parent.name
             with ZipFile(BytesIO(project_zip.read(file_path))) as annotation_zip:
                 typesystem = cassis.load_typesystem(BytesIO(annotation_zip.read('TypeSystem.xml')))
