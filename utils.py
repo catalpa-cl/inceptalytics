@@ -1,5 +1,6 @@
 import cassis
 import os
+import re
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
@@ -52,19 +53,24 @@ def annotation_info_from_xmi_zip(project_zip: str):
         project_zip: String representing a path to an Inception XMI export.
     """
     annotations = []
+    regex = re.compile('.*annotation/.*/(?!\._).*zip$')
     with ZipFile(project_zip) as project_zip:
         annotation_zips = (fp for fp in project_zip.namelist() if
-                           fp.startswith('annotation/') and fp.endswith('.zip'))
+                           regex.match(fp))
         for file_path in annotation_zips:
+            print(file_path)
             source_file = Path(file_path).parent.name
             with ZipFile(BytesIO(project_zip.read(file_path))) as annotation_zip:
                 typesystem = cassis.load_typesystem(BytesIO(annotation_zip.read('TypeSystem.xml')))
-
                 cas_file = next(f for f in annotation_zip.namelist() if f.endswith('.xmi'))
                 annotator = Path(cas_file).stem
                 cas = cassis.load_cas_from_xmi(BytesIO(annotation_zip.read(cas_file)), typesystem)
 
                 annotations.append((cas, source_file, annotator))
+    
+    if not annotations:
+        raise RuntimeError('Could not parse project or empty project.')
+    
     return annotations
 
 
@@ -140,7 +146,7 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
         continuum = Continuum()
         for _, _, annotator, begin, end, annotation in df.itertuples():
             continuum.add(annotator, Segment(begin, end), annotation)
-        return continuum.compute_gamma(dissimilarity, fast = True).gamma
+        return continuum.compute_gamma(dissimilarity, fast=True).gamma
 
 
     continuum_dfs = annotation_df[['sentence', 'annotator', 'begin', 'end', 'annotation']].groupby('sentence')
