@@ -33,5 +33,7 @@ print('# pos annotations in view:', len(view.annotations))
 print('IAA Krippendorff: ', view.iaa())
 ```
 
-## GUI
+## Dashboard
 We also provide a basic [Streamlit](http://streamlit.io) web application as a starting point for a dashboard that fits your needs.
+
+![Screenshot of dashboard](img/dashboard.png?raw=true "Dashboard")
