@@ -6,7 +6,8 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
-    confusion_matrix, heatmap, percentage_agreement, gamma_agreement, SENTENCE_TYPE_NAME
+    confusion_matrix, heatmap, percentage_agreement, SENTENCE_TYPE_NAME
+from utils import gamma_agreement
 from typing import Union, Sequence, List
 
 class Project:
@@ -273,6 +274,14 @@ class View:
 
         return counts
 
+    def normalize_counts(self, counts):
+        """
+        Normalizes the counts by the maximum row count
+        """
+        counts = counts.div(counts.max(axis=1), axis=0)
+
+        return counts
+
     def confusion_matrices(self) -> pd.Series:
         """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
         if len(self.annotators) < 2:
@@ -354,8 +363,14 @@ class View:
         possible_measures = list(self._aggregate_iaa_measures.keys()) + list(self._pairwise_iaa_measures.keys())
         raise ValueError(f'"measure" must be one of {possible_measures}, but was "{measure}"!')
 
-    def progress_chart(self, include_empty_files=True):
+    def progress_chart(self, include_empty_files=True, relative=False):
         counts = self.count(['source_file', 'annotator'], include_empty_files=include_empty_files).unstack()
+
+        print(counts)
+        if relative:
+            counts = self.normalize_counts(counts)
+            print(counts)
+
         annotators = counts.columns
         files = counts.index
         fig = go.Figure(data=go.Heatmap(
@@ -365,7 +380,6 @@ class View:
             colorscale='Blues'))
 
         fig.update_layout(
-            title='annotations per annotator per file',
             yaxis_nticks=0)
 
         return fig
