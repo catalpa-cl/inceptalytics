@@ -22,3 +22,6 @@ view = project.select(
 print('# pos annotations in view:', len(view.annotations))
 
 print('IAA Krippendorff: ', view.iaa())
+
+for cf in view.confusion_matrices():
+    print(cf)
