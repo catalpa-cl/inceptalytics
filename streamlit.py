@@ -100,7 +100,7 @@ if project:
     body.metric(label=iaa_type, value=str(np.round(iaa, 4)))
     body.write(view.pairwise_kappa())
 
-    body.write(view.progress_chart())
+    body.write(view.progress_chart(relative=True))
     body.write(view.progress_chart(include_empty_files=False))
     
-    body.write(view.confusion_matrix_plots())
+    #body.write(view.confusion_matrix_plots())
