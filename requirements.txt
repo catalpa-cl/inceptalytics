@@ -3,6 +3,7 @@ pandas
 scikit-learn
 krippendorff
 streamlit
+watchdog
 plotly
 seaborn
 numpy==1.20
