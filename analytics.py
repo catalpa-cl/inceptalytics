@@ -366,10 +366,8 @@ class View:
     def progress_chart(self, include_empty_files=True, relative=False):
         counts = self.count(['source_file', 'annotator'], include_empty_files=include_empty_files).unstack()
 
-        print(counts)
         if relative:
             counts = self.normalize_counts(counts)
-            print(counts)
 
         annotators = counts.columns
         files = counts.index
