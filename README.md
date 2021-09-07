@@ -1,8 +1,15 @@
 # Inception Analytics
 
-An easy-to-use API for analyzing [Inception](https://inception-project.github.io) annotation projects.
+An easy-to-use API for analyzing [INCEpTION](https://inception-project.github.io) annotation projects.
 * We parse an XMI export of an Inception annotation project and provide easy access to (most) of the underlying data including annotators, source files, etc.
 * We provide *recipes* for computing project statistics, confusion matrices, inter-annotator-agreement, or plotting progress reports.
+
+## Installation
+
+```bash
+git clone https://github.com/zesch/inception-analytics.git
+./install.sh
+```
 
 ## Basic Usage
 
@@ -35,5 +42,12 @@ print('IAA Krippendorff: ', view.iaa())
 
 ## Dashboard
 We also provide a basic [Streamlit](http://streamlit.io) web application as a starting point for a dashboard that fits your needs.
+
+To run the dashbord
+```bash
+git clone https://github.com/zesch/inception-analytics.git
+./install.sh
+./run_streamlit.sh
+```
 
 ![Screenshot of dashboard](img/dashboard.png?raw=true "Dashboard")
