@@ -49,5 +49,6 @@ git clone https://github.com/zesch/inception-analytics.git
 ./install.sh
 ./run_streamlit.sh
 ```
+The application should be available in your browser under `http://localhost:8501`. The URL is also printed on the shell.
 
 ![Screenshot of dashboard](img/dashboard.png?raw=true "Dashboard")
