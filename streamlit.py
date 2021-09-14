@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from analytics import Project
-from utils import construct_feature_path
 
 @st.cache
 def load_project(file):
@@ -77,7 +76,7 @@ if project:
         st.stop()
 
     view = project.select(
-        annotation=construct_feature_path(layer, feature), 
+        annotation=project.feature_path(layer, feature),
         annotators=selected_annotators, 
         source_files=selected_files
     )
@@ -100,7 +99,7 @@ if project:
     body.metric(label=iaa_type, value=str(np.round(iaa, 4)))
     body.write(view.pairwise_kappa())
 
-    body.write(view.progress_chart(relative=True))
+    body.write(view.progress_chart(normalize=True))
     body.write(view.progress_chart(include_empty_files=False))
     
     #body.write(view.confusion_matrix_plots())

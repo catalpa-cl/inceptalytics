@@ -1,5 +1,4 @@
 from analytics import Project
-from utils import construct_feature_path
 
 file = "data/Example_Project_POS.zip"
 
@@ -14,7 +13,7 @@ for annotator in project.annotators:
 pos_type = "de.tudarmstadt.ukp.dkpro.core.api.lexmorph.type.pos.POS"
 
 view = project.select(
-        annotation=construct_feature_path(pos_type, "coarseValue"), 
+        annotation=project.feature_path(pos_type, "coarseValue"),
         annotators=project.annotators, 
         source_files=project.source_file_names
 )

@@ -7,7 +7,7 @@ from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
     confusion_matrix, heatmap, percentage_agreement, SENTENCE_TYPE_NAME
-from utils import gamma_agreement
+from utils import gamma_agreement, construct_feature_path
 from typing import Union, Sequence, List
 
 class Project:
@@ -81,6 +81,10 @@ class Project:
             df = df.query('source_file == @source_files')
 
         return df
+
+    def feature_path(self, layer: str, feature:str):
+        """Returns a path from the given layer and feature for passing to the Project.view method."""
+        return construct_feature_path(layer, feature, self.layer_feature_separator)
 
     def features(self, layer_name: str, filter_empty=False) -> List[str]:
         """Returns a list of all feature names for the given layer name.
@@ -274,14 +278,6 @@ class View:
 
         return counts
 
-    def normalize_counts(self, counts):
-        """
-        Normalizes the counts by the maximum row count
-        """
-        counts = counts.div(counts.max(axis=1), axis=0)
-
-        return counts
-
     def confusion_matrices(self) -> pd.Series:
         """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
         if len(self.annotators) < 2:
@@ -363,11 +359,11 @@ class View:
         possible_measures = list(self._aggregate_iaa_measures.keys()) + list(self._pairwise_iaa_measures.keys())
         raise ValueError(f'"measure" must be one of {possible_measures}, but was "{measure}"!')
 
-    def progress_chart(self, include_empty_files=True, relative=False):
+    def progress_chart(self, include_empty_files=True, normalize=False):
         counts = self.count(['source_file', 'annotator'], include_empty_files=include_empty_files).unstack()
 
-        if relative:
-            counts = self.normalize_counts(counts)
+        if normalize:
+            counts = counts.div(counts.max(axis=1), axis=0)  # normalize by files
 
         annotators = counts.columns
         files = counts.index
