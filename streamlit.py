@@ -1,6 +1,8 @@
 import streamlit as st
 import numpy as np
 from analytics import Project
+from streamlit_utils import st_indexed_triangle, st_grid
+from math import ceil
 
 @st.cache
 def load_project(file):
@@ -102,5 +104,23 @@ if project:
     body.write(view.progress_chart(include_empty_files=False))
 
     body.write('## Confusion Matrices')
-    for plot in view.confusion_matrix_plots():
-        body.write(plot)
+    conf_plots = view.confusion_matrix_plots()
+    max_cols = 5
+
+    if len(project.annotators) < max_cols:  # organise matrices in triangle
+        grid = st_indexed_triangle(project.annotators)
+        for idx, plot in conf_plots.iteritems():
+            a, b = idx
+            grid[a][b].write(plot)
+    else:  # organise plots in grid, square if possible
+        n_annotators = len(annotators)
+        n_cols = min(ceil(n_annotators ** 0.5), max_cols)
+        n_rows = ceil(n_annotators / n_cols)
+        grid = st_grid(n_rows, n_cols)
+
+        i = j = 0
+        for plot in conf_plots:
+            grid[i][j].write(plot)
+            j = (j + 1) % n_cols
+            if j == 0:
+                i = (i + 1) % n_rows
