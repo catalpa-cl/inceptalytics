@@ -46,6 +46,7 @@ def construct_feature_path(layer, feature, sep='>'):
 # IO Utils
 ###
 
+
 def annotation_info_from_xmi_zip(project_zip: str):
     """
     Returns a list of tuples containing information about annotations. Tuples contain (CAS, Source File Name, Annotator name).
@@ -147,7 +148,6 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
         for _, _, annotator, begin, end, annotation in df.itertuples():
             continuum.add(annotator, Segment(begin, end), annotation)
         return continuum.compute_gamma(dissimilarity, fast=True).gamma
-
 
     continuum_dfs = annotation_df[['sentence', 'annotator', 'begin', 'end', 'annotation']].groupby('sentence')
     diss = CombinedCategoricalDissimilarity()

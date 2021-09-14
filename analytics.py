@@ -10,6 +10,7 @@ from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_
 from utils import gamma_agreement, construct_feature_path
 from typing import Union, Sequence, List
 
+
 class Project:
     @classmethod
     def from_zipped_xmi(cls, project_path):
@@ -134,20 +135,20 @@ class Project:
     def _annotations(self, annotation_info, layer_name, feature_name):
         entries = []
         for cas, source_file, annotator in annotation_info.itertuples(index=False, name=None):
-                for sentence in cas.select(SENTENCE_TYPE_NAME):
-                    try:
-                        for annotation in cas.select_covered(layer_name, sentence):
-                            sentence_id = f'{source_file}_{sentence.begin}-{sentence.end}'
-                            entry = (annotation,
-                                     annotation.get_covered_text(),
-                                     source_file,
-                                     sentence_id,
-                                     annotation.begin,
-                                     annotation.end,
-                                     annotator)
-                            entries.append(entry)
-                    except cassis.typesystem.TypeNotFoundError:
-                        continue
+            for sentence in cas.select(SENTENCE_TYPE_NAME):
+                try:
+                    for annotation in cas.select_covered(layer_name, sentence):
+                        sentence_id = f'{source_file}_{sentence.begin}-{sentence.end}'
+                        entry = (annotation,
+                                 annotation.get_covered_text(),
+                                 source_file,
+                                 sentence_id,
+                                 annotation.begin,
+                                 annotation.end,
+                                 annotator)
+                        entries.append(entry)
+                except cassis.typesystem.TypeNotFoundError:
+                    continue
         columns = ['_annotation', 'text', 'source_file', 'sentence', 'begin', 'end', 'annotator']
         index = ['source_file', 'sentence', 'begin', 'end', 'annotator']
         annotations = pd.DataFrame(entries, columns=columns).set_index(index)
@@ -225,7 +226,7 @@ class View:
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
         return self._annotation_dataframe.loc[~self._annotation_dataframe.index.duplicated(), 'annotation'].unstack()
 
-    def value_counts(self, grouped_by: Union[str, Sequence[str]] = None, include_empty_files=False) -> pd.Series:
+    def value_counts(self, grouped_by: Union[str, Sequence[str]] = None) -> pd.Series:
         """
         Returns a Series containing value counts of the feature included in the view.
 
