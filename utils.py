@@ -5,7 +5,7 @@ from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 import pandas as pd
-import seaborn as sns
+import plotly.graph_objects as go
 from sklearn.metrics import confusion_matrix as conf_mat
 import numpy as np
 from typing import List, Union
@@ -165,15 +165,16 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
 # Plotting
 ###
 
-def heatmap(confusion_matrix: pd.DataFrame) -> Figure:
-    ax = sns.heatmap(confusion_matrix, square=True, annot=True, cbar=False, fmt='d', cmap='YlGnBu')
+def heatmap(table: pd.DataFrame) -> Figure:
+    fig = go.Figure(data=go.Heatmap(
+        z=table.values,
+        x=table.columns,
+        y=table.index,
+        colorscale='Blues'))
 
-    maxlen_x, maxlen_y = 12, 16
-    ylabels = [label if len(label) < maxlen_y else label[:maxlen_y - 1] + '.' for label in confusion_matrix.columns]
-    xlabels = [label if len(label) < maxlen_x else label[:maxlen_x - 1] + '.' for label in confusion_matrix.columns]
-    ax.set_yticklabels(ylabels)
-    ax.set_xticklabels(xlabels, rotation=45, ha='right')
+    fig.update_layout(dict(
+        xaxis_title=table.columns.name,
+        yaxis_title=table.index.name
+    ))
 
-    fig = ax.get_figure()
-    fig.tight_layout()
     return fig

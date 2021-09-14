@@ -366,15 +366,7 @@ class View:
         if normalize:
             counts = counts.div(counts.max(axis=1), axis=0)  # normalize by files
 
-        annotators = counts.columns
-        files = counts.index
-        fig = go.Figure(data=go.Heatmap(
-            z=counts,
-            x=annotators,
-            y=files,
-            colorscale='Blues'))
-
-        fig.update_layout(
-            yaxis_nticks=0)
+        fig = heatmap(counts)
+        fig.update_layout(yaxis_nticks=0)
 
         return fig
