@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
 from analytics import Project
 
@@ -101,5 +100,7 @@ if project:
 
     body.write(view.progress_chart(normalize=True))
     body.write(view.progress_chart(include_empty_files=False))
-    
-    #body.write(view.confusion_matrix_plots())
+
+    body.write('## Confusion Matrices')
+    for plot in view.confusion_matrix_plots():
+        body.write(plot)
