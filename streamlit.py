@@ -108,7 +108,7 @@ if project:
     max_cols = 5
 
     if len(project.annotators) < max_cols:  # organise matrices in triangle
-        grid = st_indexed_triangle(project.annotators)
+        grid = st_indexed_triangle(project.annotators, offset=1)
         for idx, plot in conf_plots.iteritems():
             a, b = idx
             grid[a][b].write(plot)
