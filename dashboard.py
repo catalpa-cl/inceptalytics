@@ -3,6 +3,7 @@ import numpy as np
 from analytics import Project
 from streamlit_utils import st_indexed_triangle, st_grid
 from math import ceil
+import pandas as pd
 
 @st.cache
 def load_project(file):
@@ -98,7 +99,7 @@ if project:
     counts = view.count(['annotator', 'source_file'])
 
     stats.write(f'Annotations in Selection: {sum(counts)}')
-    stats.write('#### Breakdown by Annotator')
+    stats.write('### Breakdown by Annotator')
     stats.write(view.count('annotator'))
     stats.write('### Breakdown by Labels')
     stats.write(view.value_counts())
@@ -131,7 +132,26 @@ if project:
     body.metric(label=iaa_type, value=str(np.round(iaa, 4)))
     body.write(view.pairwise_kappa())
 
+    body.write('### IAA by Label')
+
+    individual_iaa_labels = body.multiselect(
+        'Labels to calculate IAA',
+        options=view.labels,
+        default=view.labels,
+        key='individual_iaa_labels'
+    )
+
+    if individual_iaa_labels:
+        if iaa_type == 'gamma':
+            iaa_label_scores = [view.filter_labels(label).iaa(measure=iaa_type) for label in individual_iaa_labels]
+            body.write(pd.Series(iaa_label_scores, index=individual_iaa_labels, name=iaa_type))
+        else:
+            body.warning('Unitising IAA per Label is currently only supported for the _gamma_ IAA measure. '
+                         'Please select the appropriate IAA statistic on the left. '
+                         'Keep in mind that calculating the _gamma_ measure per label may take a while.')
+
     body.write('## Confusion Matrices')
+    # TODO: wrap in util function
     conf_plots = view.confusion_matrix_plots
     max_cols = 5
 

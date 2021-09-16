@@ -181,7 +181,7 @@ class View:
         'gamma': gamma_agreement
     }
 
-    def __init__(self, annotations, project, layer_name, feature_name=None):
+    def __init__(self, annotations: pd.DataFrame, project: Project, layer_name: str, feature_name: str = None):
         self._annotation_dataframe = annotations
         self.project = project
         self.layer_name = layer_name
@@ -250,6 +250,12 @@ class View:
     def confusion_matrix_plots(self):
         """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
         return self.confusion_matrices.apply(heatmap)
+
+    def filter_labels(self, labels: List[str] = None, include=True):
+        """Returns a View of the current annotations, filtered by the given list of labels."""
+        op = '==' if include else '!='
+        annotations = self._annotation_dataframe.query(f'annotation {op} @labels')
+        return View(annotations, self.project, self.layer_name, self.feature_name)
 
     def value_counts(self, grouped_by: Union[str, Sequence[str]] = None) -> pd.Series:
         """
@@ -348,7 +354,7 @@ class View:
                 if level == 'nominal':
                     category_to_index = {category: i for i, category in enumerate(self.labels)}
                     M.replace(category_to_index, inplace=True)
-                return agreement_fn(M.values.T, level_of_measurement=level)
+                    return agreement_fn(M.values.T, level_of_measurement=level)
 
             if measure == 'gamma':
                 M = self._annotation_dataframe.reset_index()
