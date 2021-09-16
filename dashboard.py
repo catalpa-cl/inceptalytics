@@ -91,7 +91,7 @@ if project:
     stats.write(f"Files (annotated / all): {nr_of_annotated_files}/{nr_of_all_files}")
 
     stats.write("## Current View")
-    stats.write(f'Selected Annotation: "{feature}"')
+    stats.write(f'Selected Annotation: **{feature}**')
     stats.write('Selected annotators: ' + str(len(selected_annotators)))
     stats.write('Selected files: ' + str(len(selected_files)))
 
@@ -123,8 +123,8 @@ if project:
     body.write(count_overview)
 
     body.write('## Progress')
-    body.write(view.progress_chart(normalize=True))
-    body.write(view.progress_chart(include_empty_files=False))
+    show_percentages_per_file = body.checkbox('Show completion status of files.')
+    body.write(view.progress_chart(normalize=show_percentages_per_file))
 
     body.write('## Agreement Statistics')
     iaa = view.iaa(measure=iaa_type)
