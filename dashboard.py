@@ -86,25 +86,53 @@ if project:
     nr_of_all_files = nr_of_annotated_files + len(project.empty_source_file_names)
 
     stats.write("## Project Stats")
-    stats.write('Nr custom layers: ' + str(len(project.custom_layers)))
-    stats.write('Nr annotators: ' + str(len(project.annotators)))
-    stats.write(f"Nr files (annotated / all): {nr_of_annotated_files}/{nr_of_all_files}")
+    stats.write('Custom layers: ' + str(len(project.custom_layers)))
+    stats.write('Annotators: ' + str(len(project.annotators)))
+    stats.write(f"Files (annotated / all): {nr_of_annotated_files}/{nr_of_all_files}")
 
     stats.write("## Current View")
+    stats.write(f'Selected Annotation: "{feature}"')
     stats.write('Selected annotators: ' + str(len(selected_annotators)))
     stats.write('Selected files: ' + str(len(selected_files)))
 
-    body.write(view.count(['annotator', 'source_file']))
+    counts = view.count(['annotator', 'source_file'])
 
+    stats.write(f'Annotations in Selection: {sum(counts)}')
+    stats.write('#### Breakdown by Annotator')
+    stats.write(view.count('annotator'))
+    stats.write('### Breakdown by Labels')
+    stats.write(view.value_counts())
+
+    body.write('## Annotation Overview')
+    body.write('Select details to include in the overview')
+
+    split_by_files = body.checkbox('Files')
+    split_by_labels = body.checkbox('Labels')
+
+    count_fn = view.value_counts if split_by_labels else view.count
+    levels = ['annotator']
+
+    if split_by_files:
+        levels.append('source_file')
+
+    count_overview = count_fn(grouped_by=levels)
+
+    if count_overview.index.nlevels > 1:
+        count_overview = count_overview.unstack(level=0)
+
+    body.write(count_overview)
+
+    body.write('## Progress')
+    body.write(view.progress_chart(normalize=True))
+    body.write(view.progress_chart(include_empty_files=False))
+
+    body.write('## Agreement Statistics')
     iaa = view.iaa(measure=iaa_type)
     body.metric(label=iaa_type, value=str(np.round(iaa, 4)))
     body.write(view.pairwise_kappa())
 
-    body.write(view.progress_chart(normalize=True))
-    body.write(view.progress_chart(include_empty_files=False))
-
     body.write('## Confusion Matrices')
-    conf_plots = view.confusion_matrix_plots()
+    conf_plots = view.confusion_matrix_plots
     max_cols = 5
 
     if len(project.annotators) < max_cols:  # organise matrices in triangle

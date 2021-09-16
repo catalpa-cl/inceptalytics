@@ -1,7 +1,6 @@
 import cassis
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
 from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
@@ -226,6 +225,32 @@ class View:
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
         return self._annotation_dataframe.loc[~self._annotation_dataframe.index.duplicated(), 'annotation'].unstack()
 
+    @property
+    def confusion_matrices(self) -> pd.Series:
+        """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
+        if len(self.annotators) < 2:
+            return pd.Series(dtype='object')
+
+        M = self.document_annotator_matrix
+        pairs = [list(pair) for pair in combinations(self.annotators, 2)]
+        labels = self.labels
+
+        entries = []
+        for pair in pairs:
+            a, b = pair
+            cm = confusion_matrix(M, pair, labels)
+            cm_df = pd.DataFrame(cm, index=labels, columns=labels).rename_axis(index=a, columns=b)
+            entries.append((a, b, cm_df))
+
+        index = ['a', 'b']
+        name = 'confusion_matrix'
+        return pd.DataFrame(entries, columns=[*index, name]).set_index(index)[name]
+
+    @property
+    def confusion_matrix_plots(self):
+        """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
+        return self.confusion_matrices.apply(heatmap)
+
     def value_counts(self, grouped_by: Union[str, Sequence[str]] = None) -> pd.Series:
         """
         Returns a Series containing value counts of the feature included in the view.
@@ -278,30 +303,6 @@ class View:
             counts -= overcount
 
         return counts
-
-    def confusion_matrices(self) -> pd.Series:
-        """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
-        if len(self.annotators) < 2:
-            return pd.Series(dtype='object')
-
-        M = self.document_annotator_matrix
-        pairs = [list(pair) for pair in combinations(self.annotators, 2)]
-        labels = self.labels
-
-        entries = []
-        for pair in pairs:
-            a, b = pair
-            cm = confusion_matrix(M, pair, labels)
-            cm_df = pd.DataFrame(cm, index=labels, columns=labels).rename_axis(index=a, columns=b)
-            entries.append((a, b, cm_df))
-
-        index = ['a', 'b']
-        name = 'confusion_matrix'
-        return pd.DataFrame(entries, columns=[*index, name]).set_index(index)[name]
-
-    def confusion_matrix_plots(self):
-        """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
-        return self.confusion_matrices().apply(heatmap)
 
     def pairwise_kappa(self, measure='kappa') -> pd.Series:
         """
@@ -366,7 +367,4 @@ class View:
         if normalize:
             counts = counts.div(counts.max(axis=1), axis=0)  # normalize by files
 
-        fig = heatmap(counts)
-        fig.update_layout(yaxis_nticks=0)
-
-        return fig
+        return heatmap(counts)
