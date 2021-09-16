@@ -251,10 +251,26 @@ class View:
         """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
         return self.confusion_matrices.apply(heatmap)
 
+    # TODO: Unify filtering functions
     def filter_labels(self, labels: List[str] = None, include=True):
         """Returns a View of the current annotations, filtered by the given list of labels."""
+
         op = '==' if include else '!='
         annotations = self._annotation_dataframe.query(f'annotation {op} @labels')
+        return View(annotations, self.project, self.layer_name, self.feature_name)
+
+    def filter_sentences_by_labels(self, labels: List[str] = None, include=True):
+        """
+        Returns a view containing all sentences of the current view that contain at least a single annotation
+        containing any of the given labels. Note that annotations with other labels will be included in the list of
+        annotations.
+        """
+
+        def filter_fn(sentence):
+            return np.any(np.isin(labels, sentence['annotation'].unique(), invert=not include))
+
+        annotations = self._annotation_dataframe.groupby('sentence').filter(filter_fn)
+
         return View(annotations, self.project, self.layer_name, self.feature_name)
 
     def value_counts(self, grouped_by: Union[str, Sequence[str]] = None) -> pd.Series:
