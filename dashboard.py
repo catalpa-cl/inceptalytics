@@ -151,11 +151,17 @@ if project:
                          'Keep in mind that calculating the _gamma_ measure per label may take a while.')
 
     body.write('## Confusion Matrices')
-    # TODO: wrap in util function
-    conf_plots = view.confusion_matrix_plots
-    max_cols = 5
+    only_differences = body.checkbox('Display only differences', False)
 
-    if len(project.annotators) < max_cols:  # organise matrices in triangle
+    body.write('### Total Confusion Matrix')
+    body.write(view.total_confusion_matrix_plot(only_differences))
+
+
+    body.write('### Pairwise Confusion Matrices')
+    conf_plots = view.confusion_matrix_plots(only_differences)
+    max_cols = st.number_input('Maximum Number of Columns', min_value=1, value=4)
+
+    if len(project.annotators) <= max_cols:  # organise matrices in triangle
         grid = st_indexed_triangle(project.annotators, offset=1)
         for idx, plot in conf_plots.iteritems():
             a, b = idx

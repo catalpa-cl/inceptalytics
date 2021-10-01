@@ -136,6 +136,14 @@ def confusion_matrix(da_matrix: pd.DataFrame,
     return conf_mat(annos_a, annos_b, labels=labels)
 
 
+def zero_diag_cm_df(cm_df):
+    cm_df = cm_df.copy()
+    labels = cm_df.columns
+    for i in labels:
+        cm_df.loc[i, i] = 0
+    return cm_df
+
+
 def percentage_agreement(a, b):
     a = np.asarray(a)
     b = np.asarray(b)

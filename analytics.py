@@ -5,7 +5,7 @@ from itertools import combinations
 from sklearn.metrics import cohen_kappa_score
 from krippendorff import alpha
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
-    confusion_matrix, heatmap, percentage_agreement, SENTENCE_TYPE_NAME
+    confusion_matrix, heatmap, percentage_agreement, SENTENCE_TYPE_NAME, zero_diag_cm_df
 from utils import gamma_agreement, construct_feature_path
 from typing import Union, Sequence, List
 
@@ -225,8 +225,7 @@ class View:
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
         return self._annotation_dataframe.loc[~self._annotation_dataframe.index.duplicated(), 'annotation'].unstack()
 
-    @property
-    def confusion_matrices(self) -> pd.Series:
+    def confusion_matrices(self, only_differences=True) -> pd.Series:
         """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
         if len(self.annotators) < 2:
             return pd.Series(dtype='object')
@@ -240,16 +239,29 @@ class View:
             a, b = pair
             cm = confusion_matrix(M, pair, labels)
             cm_df = pd.DataFrame(cm, index=labels, columns=labels).rename_axis(index=a, columns=b)
+
+            if only_differences:
+                cm_df = zero_diag_cm_df(cm_df)
+
             entries.append((a, b, cm_df))
 
         index = ['a', 'b']
         name = 'confusion_matrix'
         return pd.DataFrame(entries, columns=[*index, name]).set_index(index)[name]
 
-    @property
-    def confusion_matrix_plots(self):
+    def total_confusion_matrix(self, only_differences=False):
+        total = np.sum(self.confusion_matrices(only_differences))
+        total.index.rename(None, inplace=True)
+        total.columns.rename(None, inplace=True)
+        return total
+
+    def total_confusion_matrix_plot(self, only_differences=False):
+        cm = self.total_confusion_matrix(only_differences)
+        return heatmap(cm)
+
+    def confusion_matrix_plots(self, only_differences=False):
         """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
-        return self.confusion_matrices.apply(heatmap)
+        return self.confusion_matrices(only_differences).apply(heatmap)
 
     # TODO: Unify filtering functions
     def filter_labels(self, labels: List[str] = None, include=True):
