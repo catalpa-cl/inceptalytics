@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 from analytics import Project
+from utils import heatmap
 from streamlit_utils import st_indexed_triangle, st_grid
 from math import ceil
 import pandas as pd
@@ -154,27 +155,38 @@ if project:
     only_differences = body.checkbox('Display only differences', False)
 
     body.write('### Total Confusion Matrix')
-    body.write(view.total_confusion_matrix_plot(only_differences))
+    body.write(
+        heatmap(view.confusion_matrices(only_differences, aggregate='total'))
+    )
 
+    body.write('### Individual Confusion Matrices')
+    by_annotator = body.checkbox('Aggregate by annotators', False)
 
-    body.write('### Pairwise Confusion Matrices')
-    conf_plots = view.confusion_matrix_plots(only_differences)
-    max_cols = st.number_input('Maximum Number of Columns', min_value=1, value=4)
+    cms = view.confusion_matrices(only_differences, aggregate='by_annotator' if by_annotator else None)
+    conf_plots = cms.apply(heatmap)
 
-    if len(project.annotators) <= max_cols:  # organise matrices in triangle
-        grid = st_indexed_triangle(project.annotators, offset=1)
-        for idx, plot in conf_plots.iteritems():
-            a, b = idx
-            grid[a][b].write(plot)
-    else:  # organise plots in grid, square if possible
-        n_annotators = len(annotators)
-        n_cols = min(ceil(n_annotators ** 0.5), max_cols)
-        n_rows = ceil(n_annotators / n_cols)
-        grid = st_grid(n_rows, n_cols)
-
-        i = j = 0
+    # TODO: cleanup
+    # display a list of matrices
+    if by_annotator:
         for plot in conf_plots:
-            grid[i][j].write(plot)
-            j = (j + 1) % n_cols
-            if j == 0:
-                i = (i + 1) % n_rows
+            body.write(plot)
+    # find good layout to present pairwise matrices
+    else:
+        max_cols = body.number_input('Maximum Number of Columns', min_value=1, value=4)
+        if len(project.annotators) <= max_cols:  # organise matrices in triangle
+            grid = st_indexed_triangle(project.annotators, offset=1)
+            for idx, plot in conf_plots.iteritems():
+                a, b = idx
+                grid[a][b].write(plot)
+        else:  # organise plots in grid, square if possible
+            n_annotators = len(annotators)
+            n_cols = min(ceil(n_annotators ** 0.5), max_cols)
+            n_rows = ceil(n_annotators / n_cols)
+            grid = st_grid(n_rows, n_cols)
+
+            i = j = 0
+            for plot in conf_plots:
+                grid[i][j].write(plot)
+                j = (j + 1) % n_cols
+                if j == 0:
+                    i = (i + 1) % n_rows

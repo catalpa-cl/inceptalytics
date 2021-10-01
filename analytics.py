@@ -225,7 +225,7 @@ class View:
         # TODO: handle more elegantly, annotations are lost by dropping duplicates
         return self._annotation_dataframe.loc[~self._annotation_dataframe.index.duplicated(), 'annotation'].unstack()
 
-    def confusion_matrices(self, only_differences=True) -> pd.Series:
+    def confusion_matrices(self, only_differences=False, aggregate=None) -> Union[pd.Series, pd.DataFrame]:
         """Returns a Series containing pairwise confusion matrices for every combination of annotators in the View."""
         if len(self.annotators) < 2:
             return pd.Series(dtype='object')
@@ -247,21 +247,27 @@ class View:
 
         index = ['a', 'b']
         name = 'confusion_matrix'
-        return pd.DataFrame(entries, columns=[*index, name]).set_index(index)[name]
+        cms = pd.DataFrame(entries, columns=[*index, name]).set_index(index)[name]
 
-    def total_confusion_matrix(self, only_differences=False):
-        total = np.sum(self.confusion_matrices(only_differences))
-        total.index.rename(None, inplace=True)
-        total.columns.rename(None, inplace=True)
-        return total
+        if aggregate == 'by_annotator':
+            cms = cms.to_frame().reset_index()
+            by_anno = []
+            for annotator in self.annotators:
+                a_confs = cms.query('a == @annotator').set_index(['a', 'b'])
+                b_confs = cms.query('b == @annotator').set_index(['b', 'a']).apply(lambda x: x.T)
+                total = np.sum(a_confs.append(b_confs))[0]
+                total.index.rename(annotator, inplace=True)
+                total.columns.rename('others', inplace=True)
+                by_anno.append(total)
+            return pd.Series(data=by_anno, index=self.annotators)
 
-    def total_confusion_matrix_plot(self, only_differences=False):
-        cm = self.total_confusion_matrix(only_differences)
-        return heatmap(cm)
+        if aggregate == 'total':
+            total = np.sum(cms)
+            total.index.rename(None, inplace=True)
+            total.columns.rename(None, inplace=True)
+            return total
 
-    def confusion_matrix_plots(self, only_differences=False):
-        """Returns a Series of confusion matrix plots for every combination of annotators in the view."""
-        return self.confusion_matrices(only_differences).apply(heatmap)
+        return cms
 
     # TODO: Unify filtering functions
     def filter_labels(self, labels: List[str] = None, include=True):
