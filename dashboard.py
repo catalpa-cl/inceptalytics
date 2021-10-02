@@ -6,6 +6,7 @@ from streamlit_utils import st_indexed_triangle, st_grid
 from math import ceil
 import pandas as pd
 
+
 @st.cache
 def load_project(file):
     return Project.from_zipped_xmi(file)

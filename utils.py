@@ -1,5 +1,4 @@
 import cassis
-import os
 import re
 from io import BytesIO
 from pathlib import Path
@@ -47,25 +46,28 @@ def construct_feature_path(layer, feature, sep='>'):
 ###
 
 
-def annotation_info_from_xmi_zip(project_zip: str):
+def annotation_info_from_xmi_zip(project_fp: str):
     """
     Returns a list of tuples containing information about annotations. Tuples contain (CAS, Source File Name, Annotator name).
 
     Args:
-        project_zip: String representing a path to an Inception XMI export.
+        project_fp: String representing a path to an Inception XMI export.
     """
     annotations = []
-    regex = re.compile('.*annotation/.*/(?!\._).*zip$')
-    with ZipFile(project_zip) as project_zip:
-        annotation_zips = (fp for fp in project_zip.namelist() if
-                           regex.match(fp))
-        for file_path in annotation_zips:
-            source_file = Path(file_path).parent.name
+    with ZipFile(project_fp) as project_zip:
+        regex = re.compile('.*annotation/.*/(?!\._).*zip$')
+        annotation_fps = (fp for fp in project_zip.namelist() if regex.match(fp))
+
+        typesystem = None
+        for file_path in annotation_fps:
             with ZipFile(BytesIO(project_zip.read(file_path))) as annotation_zip:
-                typesystem = cassis.load_typesystem(BytesIO(annotation_zip.read('TypeSystem.xml')))
+                if typesystem is None:
+                    typesystem = cassis.load_typesystem(BytesIO(annotation_zip.read('TypeSystem.xml')))
+
                 cas_file = next(f for f in annotation_zip.namelist() if f.endswith('.xmi'))
-                annotator = Path(cas_file).stem
                 cas = cassis.load_cas_from_xmi(BytesIO(annotation_zip.read(cas_file)), typesystem)
+                source_file = Path(file_path).parent.name
+                annotator = Path(cas_file).stem
 
                 annotations.append((cas, source_file, annotator))
     
@@ -75,42 +77,16 @@ def annotation_info_from_xmi_zip(project_zip: str):
     return annotations
 
 
-def source_files_from_xmi_zip(project_zip: str):
+def source_files_from_xmi_zip(project_fp: str):
     """
     Returns the list of all source file names of the project.
 
     Args:
-        project_zip: String representing a path to an exported Inception XMI export.
+        project_fp: String representing a path to an exported Inception XMI export.
     """
-    with ZipFile(project_zip) as project_zip:
+    with ZipFile(project_fp) as project_zip:
         return [fp.split('/', 1)[1] for fp in project_zip.namelist() if fp.startswith('source/')]
 
-
-def get_annotated_file_names(project_zip) -> tuple:
-    complete_names = []
-    annotation_files = []
-    source_files = []
-
-    with ZipFile(project_zip) as zip_file:
-        for file in zip_file.namelist():
-            if file.startswith('annotation/'):
-                complete_names.append(file)
-                annotation_files.append(file.split('/')[-1])
-                source_files.append(file.split('/')[1])
-    return complete_names, source_files, annotation_files
-
-
-def extract_project_files(project_zip, target_path: str, folder_name='annotation/'):
-    """Extracts zip files in the given project folder to the target path."""
-    with ZipFile(project_zip) as zip_file:
-        for file in zip_file.namelist():
-            if file.startswith(folder_name):
-                zip_file.extract(file, target_path)
-
-                if file.split('.')[-1] == 'zip':
-                    with ZipFile(target_path + file) as sub_zip_file:
-                        sub_zip_file.extractall(target_path + file.split('.')[0])
-                    os.remove(target_path + file)
 
 ###
 # Statistics
