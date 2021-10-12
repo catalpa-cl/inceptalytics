@@ -142,13 +142,14 @@ class Project:
                                  annotation.get_covered_text(),
                                  source_file,
                                  sentence_id,
+                                 sentence.get_covered_text(),
                                  annotation.begin,
                                  annotation.end,
                                  annotator)
                         entries.append(entry)
                 except cassis.typesystem.TypeNotFoundError:
                     continue
-        columns = ['_annotation', 'text', 'source_file', 'sentence', 'begin', 'end', 'annotator']
+        columns = ['_annotation', 'text', 'source_file', 'sentence', '_sentence_text', 'begin', 'end', 'annotator']
         index = ['source_file', 'sentence', 'begin', 'end', 'annotator']
         annotations = pd.DataFrame(entries, columns=columns).set_index(index)
 
@@ -268,6 +269,30 @@ class View:
             return total
 
         return cms
+
+    def consolidated_annotations(self, levels=['sentence'], additional_columns=[], method='majority vote'):
+        """
+        Returns a dataframe containing consolidated (unique) annotations.
+        Annotations from multiple annotators are combined into a single annotation, using the given method.
+
+        Args:
+            levels: Levels across which annotations are combined. Must be a column name or sequence of column names of
+                the View's dataframe, defaults to 'sentence'. For annotations that cover an entire sentence / document,
+                this setting should be fine. If you have more fine-grained annotations that contain more than one
+                annotation per sentence (e.g. token-level annotations), ['sentence', 'begin', 'end'] should be used.
+            additional_columns: Other columns to be included in the output. Defaults to [], returning only annotation
+                labels.
+            method: Consolidation method to use, defaults to 'majority vote' (no other method is currently implemented).
+        """
+        additional_columns = [col for col in additional_columns if col not in levels]  # filter intersecting columns
+
+        df = self.data_frame
+        consolidated = df.groupby(levels)[['annotation']].agg(lambda x: x.value_counts().index[0])
+
+        if additional_columns:
+            consolidated = consolidated.join(df.set_index(levels)[additional_columns].drop_duplicates())
+
+        return consolidated
 
     # TODO: Unify filtering functions
     def filter_labels(self, labels: List[str] = None, include=True):
