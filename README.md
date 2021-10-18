@@ -10,6 +10,7 @@ An easy-to-use API for analyzing [INCEpTION](https://inception-project.github.io
 git clone https://github.com/zesch/inception-analytics.git
 cd inception-analytics
 ./install.sh
+source env/bin/activate
 ```
 
 ## Basic Usage
