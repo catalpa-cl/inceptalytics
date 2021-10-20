@@ -339,7 +339,7 @@ class View:
             include_empty_files: If True, empty files will be included in the output. Ignored when grouped_by is None.
         """
         annotations = self._annotation_dataframe.copy()\
-            .drop(columns=['_annotation', 'text'])\
+            .drop(columns=['_annotation', '_sentence_text', 'text'])\
             .droplevel('sentence')
 
         if include_empty_files and grouped_by:
