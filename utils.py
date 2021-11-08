@@ -95,8 +95,6 @@ def source_files_from_xmi_zip(project_fp: str):
 def confusion_matrix(da_matrix: pd.DataFrame,
                      annotators: Union[List[int], List[str]],
                      labels: List[any] = None) -> pd.DataFrame:
-    if labels is None:
-        labels = da_matrix.stack().unique()
 
     M = da_matrix[annotators].dropna()
     a, b = annotators

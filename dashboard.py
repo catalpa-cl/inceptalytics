@@ -129,6 +129,11 @@ if project:
     show_percentages_per_file = body.checkbox('Show completion status of files.')
     body.write(view.progress_chart(normalize=show_percentages_per_file))
 
+    if len(view.annotators) == 1:
+        st.info('Only one annotator provided annotations for this label. '
+                'Agreement statistics and confusion matrices are therefore omitted.')
+        st.stop()
+
     body.write('## Agreement Statistics')
     iaa = view.iaa(measure=iaa_type)
     body.metric(label=iaa_type, value=str(np.round(iaa, 4)))
@@ -155,10 +160,10 @@ if project:
     body.write('## Confusion Matrices')
     only_differences = body.checkbox('Display only differences', False)
 
-    body.write('### Total Confusion Matrix')
-    body.write(
-        heatmap(view.confusion_matrices(only_differences, aggregate='total'))
-    )
+    if len(annotators) > 2:
+        body.write('### Total Confusion Matrix')
+        cms_total = view.confusion_matrices(only_differences, aggregate='total')
+        body.write(heatmap(cms_total))
 
     body.write('### Individual Confusion Matrices')
     by_annotator = body.checkbox('Aggregate by annotators', False)

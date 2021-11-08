@@ -210,10 +210,15 @@ class View:
 
     @property
     def labels(self) -> List[any]:
-        """Returns a list of all unique annotation values"""
+        """Returns a list of all unique annotation values."""
         labels = self.annotations.unique()
         labels.sort()
         return labels.tolist()
+
+    @property
+    def label2id(self):
+        """Returns a mapping from labels to integer ids."""
+        return {label: i for i, label in enumerate(self.labels)}
 
     @property
     def data_frame(self) -> pd.DataFrame:
@@ -231,9 +236,12 @@ class View:
         if len(self.annotators) < 2:
             return pd.Series(dtype='object')
 
-        M = self.document_annotator_matrix
         pairs = [list(pair) for pair in combinations(self.annotators, 2)]
         labels = self.labels
+
+        M = self.document_annotator_matrix
+        if all(type(label) == bool for label in labels):
+            M = M.replace(self.label2id)
 
         entries = []
         for pair in pairs:
@@ -263,7 +271,7 @@ class View:
             return pd.Series(data=by_anno, index=self.annotators)
 
         if aggregate == 'total':
-            total = np.sum(cms)
+            total = np.sum(cms) if len(cms) > 1 else cms[0]
             total.index.rename(None, inplace=True)
             total.columns.rename(None, inplace=True)
             return total
@@ -369,9 +377,9 @@ class View:
 
         return counts
 
-    def pairwise_kappa(self, measure='kappa') -> pd.Series:
+    def iaa_pairwise(self, measure='kappa', level='nominal') -> pd.Series:
         """
-        Returns a Series of pairwise inter-annotator agreement statistics for all annotators.
+        Returns a Series of pairwise inter-annotator agreement scores between all annotators.
 
         Args:
             measure: Name of the measure to use, either 'kappa' (default), 'percentage'.
@@ -382,21 +390,31 @@ class View:
             raise ValueError(f'"measure" must be one of {self._pairwise_iaa_measures.keys()}, but was "{measure}"!')
 
         annotators = self.annotators
+        if len(annotators) < 2:
+            return pd.DataFrame([])
+
         M = self.document_annotator_matrix
 
         entries = []
-        for pair in combinations(annotators, 2):
-            a, b = pair
-            data = M[list(pair)].dropna()
+        for a, b in combinations(annotators, 2):
+            data = M[[a, b]].dropna()
             n = len(data)
+
+            if level == 'nominal':
+                data.replace(self.label2id, inplace=True)
+
             score = agreement_fn(data[a], data[b])
             entries.append((a, b, n, score))
 
         return pd.DataFrame(entries, columns=['a', 'b', 'n', measure]).set_index(['a', 'b'])
 
+    def pairwise_kappa(self):
+        """Returns a Series of pairwise kappa scores between all annotators."""
+        return self.iaa_pairwise(measure='kappa', level='nominal')
+
     def iaa(self, measure='krippendorff', level='nominal') -> float:
         """
-        Returns inter-annotator agreement statistics for features in the view.
+        Returns inter-annotator agreement for the view.
 
         Args:
             measure: Name of the measure to use, either 'krippendorff' for Krippendorff's Alpha (default) or 'kappa',
