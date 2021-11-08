@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+type: software
+message: "If you use this software in your research, please cite it as below."
+authors:
+- family-names: "Hamacher"
+  given-names: "Marius"
+- family-names: "Zesch"
+  given-names: "Torsten"
+title: "INCEpTION Analytics Toolkit"
+version: 0.0.2-alpha
+doi: 10.5281/zenodo.5654691
+date-released: 2021-11-08
+url: "https://github.com/ltl-ude/inception-analytics"

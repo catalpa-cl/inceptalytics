@@ -1,5 +1,7 @@
 # Inception Analytics
 
+[![DOI](https://zenodo.org/badge/379546031.svg)](https://zenodo.org/badge/latestdoi/379546031)
+
 An easy-to-use API for analyzing [INCEpTION](https://inception-project.github.io) annotation projects.
 * We parse an XMI export of an Inception annotation project and provide easy access to (most) of the underlying data including annotators, source files, etc.
 * We provide *recipes* for computing project statistics, confusion matrices, inter-annotator-agreement, or plotting progress reports.
