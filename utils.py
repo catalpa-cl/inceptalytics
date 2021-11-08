@@ -8,7 +8,6 @@ import plotly.graph_objects as go
 from sklearn.metrics import confusion_matrix as conf_mat
 import numpy as np
 from typing import List, Union
-from matplotlib.figure import Figure
 from pygamma_agreement import Continuum, CombinedCategoricalDissimilarity
 from pyannote.core import Segment
 
@@ -149,7 +148,7 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
 # Plotting
 ###
 
-def heatmap(table: pd.DataFrame) -> Figure:
+def heatmap(table: pd.DataFrame):
     fig = go.Figure(data=go.Heatmap(
         z=table.values,
         x=table.columns,
