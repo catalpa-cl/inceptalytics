@@ -1,23 +1,53 @@
-import cassis
-import pandas as pd
-import numpy as np
+from io import BytesIO
 from itertools import combinations
-from sklearn.metrics import cohen_kappa_score
+from typing import Union, Sequence, List, Tuple
+
+import cassis
+import numpy as np
+import pandas as pd
 from krippendorff import alpha
+from pycaprio import Pycaprio
+from pycaprio.mappings import InceptionFormat
+from sklearn.metrics import cohen_kappa_score
+
 from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
     confusion_matrix, heatmap, percentage_agreement, SENTENCE_TYPE_NAME, zero_diag_cm_df
 from utils import gamma_agreement, construct_feature_path
-from typing import Union, Sequence, List
 
 
 class Project:
+    @classmethod
+    def from_remote(cls, remote_url: str, auth: Tuple[str, str], project_id: Union[int, str]):
+        """Loads an Inception project from a remote host.
+
+        Args:
+            remote_url: url to the remote inception instance.
+            auth: Tuple consisting of username and password for authentication. Note that the user must have the REMOTE
+                role.
+            project_id: Identifier of the project to load. If an integer is provided, it is interpreted as a
+                project ID. If a string is provided it is interpreted as project name.
+        """
+        client = Pycaprio(remote_url, authentication=auth)
+
+        if isinstance(project_id, str):
+            projects = [project for project in client.api.projects() if project.project_name == project_id]
+
+            if len(projects) == 0:
+                raise ValueError(f'There exists no project with name {project_id}')
+
+            project_id = projects[0]
+
+        zip_content = client.api.export_project(project_id, InceptionFormat.XMI)
+        return cls.from_zipped_xmi(BytesIO(zip_content))
+
     @classmethod
     def from_zipped_xmi(cls, project_path):
         """
         Loads an Inception project exported to XMI format, located at the given path.
 
         Args:
-            project_path (str): A string representing the path to the exported project.
+            project_path: A string representing the path to the exported project or a filelike object representing a zip
+                file.
         """
         annotations = annotation_info_from_xmi_zip(project_path)
         source_files = source_files_from_xmi_zip(project_path)

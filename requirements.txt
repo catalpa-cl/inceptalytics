@@ -7,3 +7,4 @@ watchdog
 plotly
 numpy==1.20
 pygamma-agreement
+pycaprio
