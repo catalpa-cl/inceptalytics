@@ -4,7 +4,6 @@ from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
 import pandas as pd
-import plotly.graph_objects as go
 from sklearn.metrics import confusion_matrix as conf_mat
 import numpy as np
 from typing import List, Union
@@ -140,22 +139,3 @@ def gamma_agreement(annotation_df: pd.DataFrame) -> float:
             print(f'Could not calculate gamma for source file "{sf}". Skipping.')
 
     return np.mean(gammas)
-
-
-###
-# Plotting
-###
-
-def heatmap(table: pd.DataFrame):
-    fig = go.Figure(data=go.Heatmap(
-        z=table.values,
-        x=table.columns,
-        y=table.index,
-        colorscale='Blues'))
-
-    fig.update_layout(dict(
-        xaxis_title=table.columns.name,
-        yaxis_title=table.index.name
-    ))
-
-    return fig

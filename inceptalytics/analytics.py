@@ -10,9 +10,9 @@ from pycaprio import Pycaprio
 from pycaprio.mappings import InceptionFormat
 from sklearn.metrics import cohen_kappa_score
 
-from utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
-    confusion_matrix, heatmap, percentage_agreement, SENTENCE_TYPE_NAME, zero_diag_cm_df
-from utils import gamma_agreement, construct_feature_path
+from inceptalytics.utils import extend_layer_name, annotation_info_from_xmi_zip, source_files_from_xmi_zip, get_dtype, \
+    confusion_matrix, percentage_agreement, SENTENCE_TYPE_NAME, zero_diag_cm_df
+from inceptalytics.utils import gamma_agreement, construct_feature_path
 
 
 class Project:
@@ -473,11 +473,3 @@ class View:
 
         possible_measures = list(self._aggregate_iaa_measures.keys()) + list(self._pairwise_iaa_measures.keys())
         raise ValueError(f'"measure" must be one of {possible_measures}, but was "{measure}"!')
-
-    def progress_chart(self, include_empty_files=True, normalize=False):
-        counts = self.count(['source_file', 'annotator'], include_empty_files=include_empty_files).unstack()
-
-        if normalize:
-            counts = counts.div(counts.max(axis=1), axis=0)  # normalize by files
-
-        return heatmap(counts)

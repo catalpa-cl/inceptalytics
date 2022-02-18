@@ -1,4 +1,4 @@
-# Inception Analytics
+# INCEpTALYTICS
 
 [![DOI](https://zenodo.org/badge/379546031.svg)](https://zenodo.org/badge/latestdoi/379546031)
 
@@ -8,17 +8,16 @@ An easy-to-use API for analyzing [INCEpTION](https://inception-project.github.io
 
 ## Installation
 
+INCEpTALYTICS is on [PyPi](https://pypi.org/). To install it run:
+
 ```bash
-git clone https://github.com/zesch/inception-analytics.git
-cd inception-analytics
-./install.sh
-source env/bin/activate
+pip install inceptalytics
 ```
 
 ## Basic Usage
 
 ```python
-from analytics import Project
+from inceptalytics import Project
 
 file = "data/Example_Project_POS.zip"
 
@@ -46,12 +45,18 @@ print('IAA Krippendorff: ', view.iaa())
 ## Dashboard
 We also provide a basic [Streamlit](http://streamlit.io) web application as a starting point for a dashboard that fits your needs.
 
-To run the dashbord
+To run the dashboard, you will have to install some additional dependencies.
+
 ```bash
-git clone https://github.com/zesch/inception-analytics.git
-./install.sh
-./run_streamlit.sh
+pip install -r examples/streamlit_requirements.txt
 ```
+
+Afterwards, you can run the dashboard.
+
+```bash
+streamlit run examples/dashboard.py
+```
+
 The application should be available in your browser under `http://localhost:8501`. The URL is also printed on the shell.
 
-![Screenshot of dashboard](img/dashboard.png?raw=true "Dashboard")
+![Screenshot of dashboard](https://raw.githubusercontent.com/ltl-ude/inception-analytics/main/img/dashboard.png "Dashboard")

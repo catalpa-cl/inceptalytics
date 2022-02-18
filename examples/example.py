@@ -1,6 +1,6 @@
-from analytics import Project
+from inceptalytics.analytics import Project
 
-file = "data/Example_Project_POS.zip"
+file = "../data/Example_Project_POS.zip"
 
 # load project
 project = Project.from_zipped_xmi(file)
