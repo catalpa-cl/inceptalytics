@@ -17,27 +17,29 @@ from inceptalytics.utils import gamma_agreement, construct_feature_path
 
 class Project:
     @classmethod
-    def from_remote(cls, remote_url: str, auth: Tuple[str, str], project_id: Union[int, str]):
+    def from_remote(cls, project: Union[int, str], remote_url: str = None, auth: Tuple[str, str] = None):
         """Loads an Inception project from a remote host.
 
         Args:
-            remote_url: url to the remote inception instance.
-            auth: Tuple consisting of username and password for authentication. Note that the user must have the REMOTE
-                role.
-            project_id: Identifier of the project to load. If an integer is provided, it is interpreted as a
+            project: Identifier of the project to load. If an integer is provided, it is interpreted as a
                 project ID. If a string is provided it is interpreted as project name.
+            remote_url: URL to the remote inception instance. If not provided, it is read from the INCEPTION_HOST
+                environment variable.
+            auth: Tuple consisting of username and password for authentication. If not provided, it is read from the
+                INCEPTION_USERNAME and INCEPTION_PASSWORD environment variables.
+                Note that the Remote API must be enabled and the user must have the REMOTE role.
         """
         client = Pycaprio(remote_url, authentication=auth)
 
-        if isinstance(project_id, str):
-            projects = [project for project in client.api.projects() if project.project_name == project_id]
+        if isinstance(project, str):
+            projects = [p for p in client.api.projects() if p.project_name == project]
 
             if len(projects) == 0:
-                raise ValueError(f'There exists no project with name {project_id}')
+                raise ValueError(f'There exists no project with name {project}')
 
-            project_id = projects[0]
+            project = projects[0]
 
-        zip_content = client.api.export_project(project_id, InceptionFormat.XMI)
+        zip_content = client.api.export_project(project, InceptionFormat.XMI)
         return cls.from_zipped_xmi(BytesIO(zip_content))
 
     @classmethod
