@@ -60,3 +60,11 @@ streamlit run examples/dashboard.py
 The application should be available in your browser under `http://localhost:8501`. The URL is also printed on the shell.
 
 ![Screenshot of dashboard](https://raw.githubusercontent.com/ltl-ude/inception-analytics/main/img/dashboard.png "Dashboard")
+
+## Changelog
+
+### Version 0.1.0
+
+* Project is now on [PyPi](https://pypi.org/project/inceptalytics/).
+* Projects can now be loaded using the [INCEpTION's Remote API](https://inception-project.github.io//releases/0.11.2/docs/admin-guide.html#sect_remote_api) using `Project.from_remote`.
+* Removed plotting functionality from INCEpTALYTICS and moved it to the dashboard under example. 
