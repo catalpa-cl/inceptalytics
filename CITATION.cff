@@ -7,7 +7,7 @@ authors:
 - family-names: "Zesch"
   given-names: "Torsten"
 title: "INCEpTION Analytics Toolkit"
-version: 0.0.2-alpha
-doi: 10.5281/zenodo.5654691
-date-released: 2021-11-08
+version: 0.0.1
+doi: 10.5281/zenodo.6138276
+date-released: 2022-02-18
 url: "https://github.com/ltl-ude/inception-analytics"
