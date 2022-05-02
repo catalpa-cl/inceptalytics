@@ -6,8 +6,8 @@ authors:
   given-names: "Marius"
 - family-names: "Zesch"
   given-names: "Torsten"
-title: "INCEpTION Analytics Toolkit"
-version: 0.0.1
+title: "INCEpTALYTICS - An easy-to-use API for analyzing INCEpTION annotation projects."
+version: 0.1.0
 doi: 10.5281/zenodo.6138276
 date-released: 2022-02-18
-url: "https://github.com/ltl-ude/inception-analytics"
+url: "https://github.com/ltl-ude/inceptalytics"
