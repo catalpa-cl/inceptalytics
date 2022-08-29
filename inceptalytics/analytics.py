@@ -40,7 +40,7 @@ class Project:
 
             project = projects[0]
 
-        zip_content = client.api.export_project(project, InceptionFormat.XMI)
+        zip_content = client.api.export_project(project, InceptionFormat.UIMA_CAS_XMI)
         return cls.from_zipped_xmi(BytesIO(zip_content))
 
     @classmethod
