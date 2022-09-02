@@ -32,7 +32,7 @@ class Project:
         client = Pycaprio(remote_url, authentication=auth)
 
         if isinstance(project, str):
-            project = project.replace(" ", "-")
+            project = project.replace(" ", "-").lower()
             projects = [p for p in client.api.projects() if p.project_name == project]
 
             if len(projects) == 0:
