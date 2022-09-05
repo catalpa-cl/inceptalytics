@@ -32,6 +32,7 @@ class Project:
         client = Pycaprio(remote_url, authentication=auth)
 
         if isinstance(project, str):
+            project = project.replace(" ", "-").lower()
             projects = [p for p in client.api.projects() if p.project_name == project]
 
             if len(projects) == 0:
@@ -39,7 +40,7 @@ class Project:
 
             project = projects[0]
 
-        zip_content = client.api.export_project(project, InceptionFormat.XMI)
+        zip_content = client.api.export_project(project, InceptionFormat.UIMA_CAS_XMI)
         return cls.from_zipped_xmi(BytesIO(zip_content))
 
     @classmethod
