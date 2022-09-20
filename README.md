@@ -68,3 +68,8 @@ The application should be available in your browser under `http://localhost:8501
 * Project is now on [PyPi](https://pypi.org/project/inceptalytics/).
 * Projects can now be loaded using the [INCEpTION's Remote API](https://inception-project.github.io//releases/0.11.2/docs/admin-guide.html#sect_remote_api) using `Project.from_remote`.
 * Removed plotting functionality from INCEpTALYTICS and moved it to the dashboard under example. 
+
+### Version 0.1.1
+
+* Added sanity checks and input normalisation to `Project.from_remote`.
+* Updated `Project.from_remote` to be compatible with the latest version of [pycaprio](https://pypi.org/project/pycaprio/).

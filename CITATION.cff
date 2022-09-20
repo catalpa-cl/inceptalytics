@@ -7,7 +7,7 @@ authors:
 - family-names: "Zesch"
   given-names: "Torsten"
 title: "INCEpTALYTICS - An easy-to-use API for analyzing INCEpTION annotation projects."
-version: 0.1.0
-doi: 10.5281/zenodo.6138276
-date-released: 2022-02-18
-url: "https://github.com/ltl-ude/inceptalytics"
+version: 0.1.1
+doi: 10.5281/zenodo.5654690
+date-released: 2022-09-20
+url: "https://github.com/catalpa-cl/inceptalytics"
