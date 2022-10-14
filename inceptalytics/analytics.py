@@ -18,7 +18,11 @@ from inceptalytics.utils import gamma_agreement, construct_feature_path
 class Project:
     @classmethod
     def from_remote(cls, project: Union[int, str], remote_url: str = None, auth: Tuple[str, str] = None):
-        """Loads an Inception project from a remote host.
+        """Loads an Inception project from a remote host. Note the following requirements for this to work:
+
+        - The Remote API must be enabled for the INCEpTION instance at the remote url.
+        - The user passed in `auth` must have the roles REMOTE and USER.
+        - The user must have permission "Manager" for the project being exported.
 
         Args:
             project: Identifier of the project to load. If an integer is provided, it is interpreted as a
@@ -27,7 +31,6 @@ class Project:
                 environment variable.
             auth: Tuple consisting of username and password for authentication. If not provided, it is read from the
                 INCEPTION_USERNAME and INCEPTION_PASSWORD environment variables.
-                Note that the Remote API must be enabled and the user must have the REMOTE role.
         """
         client = Pycaprio(remote_url, authentication=auth)
 
@@ -410,7 +413,7 @@ class View:
 
         return counts
 
-    def iaa_pairwise(self, measure='kappa', level='nominal') -> pd.Series:
+    def iaa_pairwise(self, measure='kappa', level='nominal') -> pd.DataFrame:
         """
         Returns a Series of pairwise inter-annotator agreement scores between all annotators.
 
