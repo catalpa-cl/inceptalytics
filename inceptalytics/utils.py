@@ -53,7 +53,7 @@ def annotation_info_from_xmi_zip(project_fp: str):
     """
     annotations = []
     with ZipFile(project_fp) as project_zip:
-        regex = re.compile('.*annotation/.*/(?!\._).*zip$')
+        regex = re.compile('.*(annotation|curation)/.*/(?!\._).*zip$')
         annotation_fps = (fp for fp in project_zip.namelist() if regex.match(fp))
 
         typesystem = None
