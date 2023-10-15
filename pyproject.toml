@@ -10,7 +10,7 @@ maintainers = [
     "Marius Hamacher <marius.hamacher@outlook.de>",
 ]
 readme = "README.md"
-homepage = "https://github.com/catalpa-cl/inception-analytics"
+homepage = "https://catalpa-cl.github.io/inceptalytics/index.html"
 repository = "https://github.com/catalpa-cl/inception-analytics"
 classifiers = [
     "Development Status :: 3 - Alpha",
