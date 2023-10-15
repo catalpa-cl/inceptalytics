@@ -9,13 +9,14 @@
 
 import sys
 from pathlib import Path
-
 sys.path.insert(0, str((Path(__file__).parent.parent.parent / 'inceptalytics').absolute()))
+
+import inceptalytics
 
 project = 'INCEpTALYTICS'
 copyright = '2023, Marius Hamacher, Torsten Zesch'
 author = 'Marius Hamacher, Torsten Zesch'
-release = '2021/11/08'
+release = f'Version {inceptalytics.__version__}'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -23,6 +24,7 @@ release = '2021/11/08'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'm2r2',
 ]
 
 napoleon_google_docstring = True
@@ -36,5 +38,5 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
 html_static_path = ['_static']
