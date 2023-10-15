@@ -26,7 +26,7 @@ extensions = [
 ]
 
 # this needs proper fixing
-autodoc_mock_imports = ['cassis', 'numpy', 'pycaprio', 'krippendorff', 'sklearn', 'pandas']
+autodoc_mock_imports = ['cassis', 'numpy', 'pycaprio', 'krippendorff', 'sklearn', 'pandas', 'pygamma_agreement']
 napoleon_google_docstring = True
 
 
