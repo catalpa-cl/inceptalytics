@@ -1,3 +1,5 @@
+"""The core functionalities of the package. Contains the two main classes Project and View."""
+
 from io import BytesIO
 from itertools import combinations
 from typing import Union, Sequence, List, Tuple
