@@ -42,7 +42,6 @@ urllib3 = "^1.26.15"
 [tool.poetry.group.docs.dependencies]
 sphinx = "^7.2.6"
 m2r2 = "^0.3.3.post2"
-pydata-sphinx-theme = "^0.14.1"
 furo = "^2023.9.10"
 
 [build-system]
