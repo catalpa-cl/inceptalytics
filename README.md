@@ -42,6 +42,8 @@ print('# pos annotations in view:', len(view.annotations))
 print('IAA Krippendorff: ', view.iaa())
 ```
 
+See the [Documentation](https://catalpa-cl.github.io/inceptalytics/index.html) for further details.
+
 ## Dashboard
 We also provide a basic [Streamlit](http://streamlit.io) web application as a starting point for a dashboard that fits your needs.
 
